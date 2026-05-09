@@ -1,12 +1,9 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef } from 'react';
 import {
   motion,
   useScroll,
   useTransform,
   useSpring,
-  useInView,
-  useMotionValue,
-  animate,
 } from 'framer-motion';
 
 const aboutFeatures = [
@@ -55,31 +52,6 @@ const RevealHeading = ({ children }: { children: React.ReactNode }) => {
         {children}
       </motion.span>
     </h2>
-  );
-};
-
-/* ── Counter that ticks up when the badge enters view ──────────── */
-const Counter = ({ to = 10, suffix = '+' }: { to?: number; suffix?: string }) => {
-  const ref = useRef<HTMLSpanElement>(null);
-  const inView = useInView(ref, { once: true, margin: '-80px' });
-  const value = useMotionValue(0);
-  const [display, setDisplay] = useState('0');
-
-  useEffect(() => {
-    if (!inView) return;
-    const controls = animate(value, to, {
-      duration: 1.6,
-      ease: [0.16, 1, 0.3, 1],
-      onUpdate: (v) => setDisplay(Math.round(v).toString()),
-    });
-    return () => controls.stop();
-  }, [inView, to, value]);
-
-  return (
-    <span ref={ref}>
-      {display}
-      {suffix}
-    </span>
   );
 };
 
@@ -291,22 +263,6 @@ const AboutSection = () => {
                     </svg>
                   </span>
                 </div>
-              </motion.div>
-
-              {/* Floating ticker badge */}
-              <motion.div
-                initial={{ opacity: 0, y: 30, rotate: -6 }}
-                whileInView={{ opacity: 1, y: 0, rotate: -4 }}
-                viewport={{ once: true, margin: '-80px' }}
-                transition={{ delay: 0.6, duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-                className="absolute -bottom-6 -left-6 bg-gradient-to-br from-[#F7B500] to-[#FF6B35] text-black px-6 py-5 rounded-2xl shadow-[0_20px_60px_-15px_rgba(247,181,0,0.45)]"
-              >
-                <p className="text-4xl font-black leading-none tabular-nums">
-                  <Counter to={10} suffix="+" />
-                </p>
-                <p className="text-[10px] font-bold uppercase tracking-[0.18em] mt-2">
-                  Years of trust
-                </p>
               </motion.div>
 
               {/* Vertical year strip */}
