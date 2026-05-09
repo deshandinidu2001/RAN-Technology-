@@ -2,14 +2,19 @@ import express, { Express, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
+import path from 'path';
 
 import authRoutes from './routes/auth';
 import productRoutes from './routes/products';
 import orderRoutes from './routes/orders';
 import repairRoutes from './routes/repairs';
 
-// Load environment variables
-dotenv.config();
+// Load environment variables from the backend folder in both src and dist builds.
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
+const bundledDatabaseUrl = `file:${path.resolve(__dirname, '../prisma/dev.db')}`;
+if (!process.env.DATABASE_URL || process.env.DATABASE_URL.startsWith('file:.')) {
+  process.env.DATABASE_URL = bundledDatabaseUrl;
+}
 
 // Initialize Prisma client
 export const prisma = new PrismaClient();

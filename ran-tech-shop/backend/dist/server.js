@@ -8,12 +8,17 @@ const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const client_1 = require("@prisma/client");
+const path_1 = __importDefault(require("path"));
 const auth_1 = __importDefault(require("./routes/auth"));
 const products_1 = __importDefault(require("./routes/products"));
 const orders_1 = __importDefault(require("./routes/orders"));
 const repairs_1 = __importDefault(require("./routes/repairs"));
-// Load environment variables
-dotenv_1.default.config();
+// Load environment variables from the backend folder in both src and dist builds.
+dotenv_1.default.config({ path: path_1.default.resolve(__dirname, '../.env') });
+const bundledDatabaseUrl = `file:${path_1.default.resolve(__dirname, '../prisma/dev.db')}`;
+if (!process.env.DATABASE_URL || process.env.DATABASE_URL.startsWith('file:.')) {
+    process.env.DATABASE_URL = bundledDatabaseUrl;
+}
 // Initialize Prisma client
 exports.prisma = new client_1.PrismaClient();
 // Create Express app
