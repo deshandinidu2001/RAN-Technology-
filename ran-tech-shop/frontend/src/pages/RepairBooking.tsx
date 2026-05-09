@@ -168,7 +168,8 @@ const RepairBooking: React.FC = () => {
   }, [isAuthenticated]);
 
   const filteredServices = selectedCategory === 'all'
-    ? services : services.filter(s => getCategoryServiceTypes(selectedCategory).includes(s.serviceType || ''));
+    ? services
+    : services.filter(s => getCategoryServiceTypes(selectedCategory).includes(s.serviceType || ''));
 
   const getSelectedServiceObjects = () => services.filter(s => selectedServices.includes(s.id));
   const calculateTotal = () => getSelectedServiceObjects().reduce((t, s) => t + normalizePrice(s.price), 0);

@@ -245,10 +245,20 @@ exports.getProductById = getProductById;
  * Get featured products
  * GET /api/products/featured
  */
-const getFeaturedProducts = async (_req, res) => {
+const getFeaturedProducts = async (req, res) => {
     try {
+        // Default behaviour: only real shop products (services have their own surface).
+        // Pass ?includeServices=true to opt in (used by repair home if ever needed).
+        const includeServices = req.query.includeServices === 'true';
+        const where = { featured: true };
+        if (!includeServices) {
+            // Exclude services (`isService = true`). Include rows where the field is
+            // null/false/undefined — SQLite stores those as NULL when the column is
+            // missing, so we filter on `not equal true`.
+            where.NOT = { isService: true };
+        }
         const products = await server_1.prisma.product.findMany({
-            where: { featured: true },
+            where,
             take: 8,
             orderBy: { createdAt: 'desc' },
         });
@@ -291,7 +301,7 @@ exports.getCategories = getCategories;
  */
 const createProduct = async (req, res) => {
     try {
-        const { name, description, price, category, image, stock, featured, subcategory, brand, sku, specs, features, images, ramType, ramSpeed, ramCapacity, ssdType, ssdCapacity, ssdSpeed, gpuMemory, gpuChipset, displaySize, displayRes, displayType, compatibility } = req.body;
+        const { name, description, price, category, image, stock, featured, subcategory, brand, sku, specs, features, images, ramType, ramSpeed, ramCapacity, ssdType, ssdCapacity, ssdSpeed, gpuMemory, gpuChipset, displaySize, displayRes, displayType, compatibility, isService, serviceType } = req.body;
         // Validate required fields
         if (!name || !description || !price || !category || !image) {
             res.status(400).json({ error: 'Name, description, price, category, and image are required' });
@@ -324,6 +334,8 @@ const createProduct = async (req, res) => {
                 displaySize: displaySize ? parseFloat(displaySize) : null,
                 displayRes,
                 displayType,
+                isService: !!isService,
+                serviceType: serviceType || null,
             },
         });
         res.status(201).json({
@@ -344,7 +356,7 @@ exports.createProduct = createProduct;
 const updateProduct = async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, description, price, category, image, stock, featured, subcategory, brand, sku, specs, features, images, ramType, ramSpeed, ramCapacity, ssdType, ssdCapacity, ssdSpeed, gpuMemory, gpuChipset, displaySize, displayRes, displayType, compatibility } = req.body;
+        const { name, description, price, category, image, stock, featured, subcategory, brand, sku, specs, features, images, ramType, ramSpeed, ramCapacity, ssdType, ssdCapacity, ssdSpeed, gpuMemory, gpuChipset, displaySize, displayRes, displayType, compatibility, isService, serviceType } = req.body;
         // Check if product exists
         const existingProduct = await server_1.prisma.product.findUnique({
             where: { id },
@@ -381,6 +393,8 @@ const updateProduct = async (req, res) => {
                 ...(displaySize !== undefined && { displaySize: displaySize ? parseFloat(displaySize) : null }),
                 ...(displayRes !== undefined && { displayRes }),
                 ...(displayType !== undefined && { displayType }),
+                ...(isService !== undefined && { isService: !!isService }),
+                ...(serviceType !== undefined && { serviceType: serviceType || null }),
             },
         });
         res.json({

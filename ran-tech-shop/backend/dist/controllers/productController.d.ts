@@ -18,7 +18,7 @@ export declare const getProductById: (req: Request, res: Response) => Promise<vo
  * Get featured products
  * GET /api/products/featured
  */
-export declare const getFeaturedProducts: (_req: Request, res: Response) => Promise<void>;
+export declare const getFeaturedProducts: (req: Request, res: Response) => Promise<void>;
 /**
  * Get all categories with product counts
  * GET /api/products/categories

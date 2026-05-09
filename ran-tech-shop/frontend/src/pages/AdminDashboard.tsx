@@ -6,6 +6,49 @@ import { useOrdersStore, RepairBooking, Order } from '../store/ordersStore';
 import { Product } from '../types';
 import api from '../utils/api';
 
+const SAMPLE_ORDERS: Order[] = [
+  {
+    id: 'RAN-SAMPLE1',
+    date: '2026-01-15',
+    status: 'processing',
+    items: [
+      {
+        id: 'sample-1',
+        name: 'Kingston Fury Impact 32GB DDR5 5600MHz',
+        quantity: 2,
+        price: 4990,
+        image: '/images/products/ram.jpg',
+      },
+    ],
+    total: 9980,
+    shippingAddress: 'No. 45, Galle Road, Colombo 03',
+    trackingNumber: 'LK8847562910',
+    customerName: 'Sample User',
+    customerEmail: 'sample@example.com',
+    customerPhone: '0771234567',
+  },
+];
+
+const SAMPLE_BOOKINGS: RepairBooking[] = [
+  {
+    ticketId: 'DEMO-001',
+    deviceType: 'Laptop',
+    deviceModel: 'Demo Device',
+    issueDescription: 'This is a sample booking shown when no live repair data exists yet.',
+    currentStage: 1,
+    bookedDate: '2026-01-14',
+    estimatedCompletion: '2026-01-18',
+    technicianName: 'Kasun Silva',
+    totalCost: 5000,
+    services: ['Sample Service'],
+    timeSlot: '10:00 AM - 11:00 AM',
+    customerName: 'Sample User',
+    customerEmail: 'sample@example.com',
+    customerPhone: '0771234567',
+    createdAt: new Date().toISOString(),
+  },
+];
+
 type TabType = 'repairs' | 'orders' | 'products' | 'services' | 'users' | 'timeslots' | 'settings';
 
 const repairStages = ['Received', 'Diagnosing', 'Waiting for Parts', 'Repairing', 'Ready for Pickup'];
@@ -149,6 +192,9 @@ const AdminDashboard: React.FC = () => {
     o.customerPhone.includes(searchTerm)
   );
 
+  const displayOrders = filteredOrders.length > 0 ? filteredOrders : SAMPLE_ORDERS;
+  const displayBookings = filteredBookings.length > 0 ? filteredBookings : SAMPLE_BOOKINGS;
+
   const blockedSlots = getBlockedSlotsForDate(selectedDate);
 
   // Filter products (non-services) based on search
@@ -170,11 +216,11 @@ const AdminDashboard: React.FC = () => {
 
   // Stats
   const stats = {
-    totalRepairs: bookings.length,
-    pendingRepairs: bookings.filter(b => b.currentStage < 4).length,
-    completedRepairs: bookings.filter(b => b.currentStage === 4).length,
-    totalOrders: orders.length,
-    processingOrders: orders.filter(o => o.status === 'processing').length,
+    totalRepairs: displayBookings.length,
+    pendingRepairs: displayBookings.filter(b => b.currentStage < 4).length,
+    completedRepairs: displayBookings.filter(b => b.currentStage === 4).length,
+    totalOrders: displayOrders.length,
+    processingOrders: displayOrders.filter(o => o.status === 'processing').length,
     totalProducts: dbProducts.length,
     lowStockProducts: dbProducts.filter(p => p.stock < 10).length,
   };
@@ -292,12 +338,12 @@ const AdminDashboard: React.FC = () => {
         {/* Repairs Tab */}
         {activeTab === 'repairs' && (
           <div className="space-y-4">
-            {filteredBookings.length === 0 ? (
+            {displayBookings.length === 0 ? (
               <div className="text-center py-12 text-white/50">
                 No repairs found
               </div>
             ) : (
-              filteredBookings.map((repair) => (
+              displayBookings.map((repair) => (
                 <motion.div
                   key={repair.ticketId}
                   layout
@@ -362,12 +408,12 @@ const AdminDashboard: React.FC = () => {
         {/* Orders Tab */}
         {activeTab === 'orders' && (
           <div className="space-y-4">
-            {filteredOrders.length === 0 ? (
+            {displayOrders.length === 0 ? (
               <div className="text-center py-12 text-white/50">
                 No orders found
               </div>
             ) : (
-              filteredOrders.map((order) => (
+              displayOrders.map((order) => (
                 <motion.div
                   key={order.id}
                   layout

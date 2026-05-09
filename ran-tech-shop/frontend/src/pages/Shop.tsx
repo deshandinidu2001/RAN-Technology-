@@ -6,7 +6,6 @@ import FilterSidebar from '../components/shop/FilterSidebar';
 import ProductModal from '../components/shop/ProductModal';
 import { Product } from '../types';
 import api from '../utils/api';
-import { useProductStore } from '../store/productStore';
 import { allProducts as mockProducts } from '../utils/mockData';
 
 interface ProductFilters {
@@ -55,16 +54,13 @@ const Shop: React.FC = () => {
 
   const navigate = useNavigate();
 
-  // Get local products from store (admin-added products)
-  const { products: localProducts } = useProductStore();
-
   // Fetch products
   useEffect(() => {
     const fetchProducts = async () => {
       setIsLoading(true);
       try {
         const params = new URLSearchParams();
-        params.set('limit', '100');
+        params.set('limit', '500');
         params.set('isService', 'false');
         
         if (selectedCategory) params.set('category', selectedCategory);
@@ -80,40 +76,7 @@ const Shop: React.FC = () => {
 
         const response = await api.get(`/products?${params.toString()}`);
         const apiProducts = response.data.products || response.data || [];
-        
-        // Merge API products with local products (admin-added)
-        // Filter local products based on current filters
-        let filteredLocalProducts = localProducts;
-        if (selectedCategory) {
-          filteredLocalProducts = filteredLocalProducts.filter(p => 
-            p.category?.toLowerCase() === selectedCategory.toLowerCase()
-          );
-        }
-        if (selectedSubcategory) {
-          filteredLocalProducts = filteredLocalProducts.filter(p => 
-            p.subcategory?.toLowerCase() === selectedSubcategory.toLowerCase()
-          );
-        }
-        if (selectedBrand) {
-          filteredLocalProducts = filteredLocalProducts.filter(p => 
-            p.brand?.toLowerCase() === selectedBrand.toLowerCase()
-          );
-        }
-        if (searchQuery) {
-          const query = searchQuery.toLowerCase();
-          filteredLocalProducts = filteredLocalProducts.filter(p => 
-            p.name.toLowerCase().includes(query) || 
-            p.description.toLowerCase().includes(query)
-          );
-        }
-        
-        // Combine and remove duplicates by ID
-        const allProducts = [...filteredLocalProducts, ...apiProducts];
-        const uniqueProducts = allProducts.filter((product, index, self) =>
-          index === self.findIndex(p => p.id === product.id)
-        );
-        
-        setProducts(uniqueProducts);
+        setProducts(apiProducts);
       } catch (error) {
         console.error('Failed to fetch products:', error);
         // Fall back to centralized mock data
@@ -121,14 +84,14 @@ const Shop: React.FC = () => {
           if (selectedCategory && p.category !== selectedCategory) return false;
           return true;
         });
-        setProducts([...localProducts, ...fallback]);
+        setProducts(fallback);
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchProducts();
-  }, [selectedCategory, selectedSubcategory, selectedBrand, selectedRamType, selectedRamSpeed, selectedRamCapacity, selectedSsdType, selectedSsdCapacity, selectedCompatibility, searchQuery, localProducts]);
+  }, [selectedCategory, selectedSubcategory, selectedBrand, selectedRamType, selectedRamSpeed, selectedRamCapacity, selectedSsdType, selectedSsdCapacity, selectedCompatibility, searchQuery]);
 
   // Fetch filters for laptop accessories
   useEffect(() => {
