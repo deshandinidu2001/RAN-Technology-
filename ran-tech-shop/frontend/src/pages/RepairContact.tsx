@@ -184,7 +184,7 @@ const RepairContact: React.FC = () => {
                     Describe your issue
                   </h2>
                   <p className="text-black/50 leading-relaxed mb-8">
-                    Provide as much detail as possible — device model, the issue, and when it started. We'll respond with next steps.
+                    Provide as much detail as possible: device model, the issue, and when it started. We'll respond with next steps.
                   </p>
 
                   <div className="space-y-4">
@@ -405,7 +405,7 @@ const RepairContact: React.FC = () => {
             {/* Embedded map */}
             <div className="relative bg-black aspect-[4/3] lg:aspect-auto">
               <iframe
-                title="RAN Repair Desk — Monaragala, Sri Lanka"
+                title="RAN Repair Desk, Monaragala, Sri Lanka"
                 src="https://www.google.com/maps?q=Monaragala,+Sri+Lanka&z=12&output=embed"
                 className="absolute inset-0 w-full h-full border-0"
                 loading="lazy"

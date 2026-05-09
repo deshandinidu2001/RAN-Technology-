@@ -213,7 +213,7 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
 
   // Note: do NOT redeclare this as a nested React component (`const FilterContent = () => (...)`).
   // A nested component is a brand-new function reference on every parent render, so React
-  // unmounts/remounts the entire subtree on each keystroke — causing the search input
+  // unmounts/remounts the entire subtree on each keystroke - causing the search input
   // to lose focus after a single character. Use a plain JSX node instead.
   const filterContent = (
     <div>

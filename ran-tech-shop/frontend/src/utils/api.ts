@@ -7,6 +7,26 @@ const api = axios.create({
   },
 });
 
+const cleanDisplayText = (value: unknown): unknown => {
+  if (typeof value === 'string') {
+    return value
+      .replace(/\s+[\u2013\u2014]\s+/g, ', ')
+      .replace(/[\u2013\u2014]/g, '-');
+  }
+
+  if (Array.isArray(value)) {
+    return value.map(cleanDisplayText);
+  }
+
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => [key, cleanDisplayText(entry)])
+    );
+  }
+
+  return value;
+};
+
 // Request interceptor for adding auth token
 api.interceptors.request.use(
   (config) => {
@@ -32,6 +52,7 @@ api.interceptors.request.use(
 // Response interceptor for handling errors
 api.interceptors.response.use(
   (response) => {
+    response.data = cleanDisplayText(response.data);
     return response;
   },
   (error) => {

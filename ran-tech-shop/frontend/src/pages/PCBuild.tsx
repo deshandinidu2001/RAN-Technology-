@@ -281,7 +281,7 @@ const PCBuild: React.FC = () => {
         !cat.sub || s?.toLowerCase() === cat.sub.toLowerCase();
 
       // ONLY accept mock products whose category or subcategory clearly matches the
-      // build part — never match on free-text specs/names (otherwise a laptop with an
+      // build part. never match on free-text specs/names (otherwise a laptop with an
       // i7 CPU appears under "Processor"). Better to fall through to the curated
       // sample list below than mislabel a finished laptop as a CPU.
       const isLaptop = (p: typeof mockProducts[number]) =>
@@ -381,7 +381,7 @@ const PCBuild: React.FC = () => {
       };
 
       try {
-        // 1) Strict: exact category (+ subcategory) — admin-tagged builds get priority
+        // 1) Strict: exact category (+ subcategory). admin-tagged builds get priority
         const strictParams = new URLSearchParams();
         strictParams.set('limit', '50');
         strictParams.set('isService', 'false');
@@ -390,7 +390,7 @@ const PCBuild: React.FC = () => {
         const strictRes = await api.get(`/products?${strictParams.toString()}`);
         let list: Product[] = strictRes.data.products || strictRes.data || [];
 
-        // 2) If empty, search the DB by keyword(s) — picks up products the admin
+        // 2) If empty, search the DB by keyword(s). picks up products the admin
         //    saved under different categories but whose name/description matches.
         if (list.length === 0 && cat.keywords?.length) {
           const keywordResults = await Promise.all(
@@ -443,7 +443,7 @@ const PCBuild: React.FC = () => {
   return (
     <div className="relative min-h-screen bg-white text-black overflow-hidden">
       {/* ══════════════════════════════════════════════════════ */}
-      {/*  HERO — Black, minimal, same as RepairContact hero   */}
+      {/*  HERO. Black, minimal, same as RepairContact hero   */}
       {/* ══════════════════════════════════════════════════════ */}
       <section className="relative pt-32 pb-24 bg-black text-white overflow-hidden">
         {/* Grid background */}
@@ -487,7 +487,7 @@ const PCBuild: React.FC = () => {
             transition={{ delay: 0.5, duration: 0.8 }}
             className="text-white/50 text-lg mt-8 max-w-xl leading-relaxed"
           >
-            Pick every component. We assemble, stress-test, and deliver — precision-built to your exact spec.
+            Pick every component. We assemble, stress-test, and deliver precision-built to your exact spec.
           </motion.p>
 
           {/* Feature strip */}
@@ -539,7 +539,7 @@ const PCBuild: React.FC = () => {
       </section>
 
       {/* ══════════════════════════════════════════════════════ */}
-      {/*  CONFIGURATOR — White bg, black accents               */}
+      {/*  CONFIGURATOR. White bg, black accents               */}
       {/* ══════════════════════════════════════════════════════ */}
       <section className="py-24 bg-white">
         <div className="container mx-auto px-4 lg:px-6">
@@ -556,7 +556,7 @@ const PCBuild: React.FC = () => {
             </h2>
           </motion.div>
 
-          {/* Step indicator — horizontal scrollable */}
+          {/* Step indicator. horizontal scrollable */}
           <div className="mb-12 overflow-x-auto scrollbar-hide">
             <div className="flex gap-px min-w-max bg-black/5">
               {BUILD_CATEGORIES.map((cat, i) => {
@@ -599,7 +599,7 @@ const PCBuild: React.FC = () => {
                 );
               })}
 
-              {/* Final Step — Review Build */}
+              {/* Final Step. Review Build */}
               {(() => {
                 const reviewActive = showSummary;
                 const allDone = selectedCount === BUILD_CATEGORIES.length;
@@ -707,7 +707,7 @@ const PCBuild: React.FC = () => {
                     </button>
                   </motion.div>
                 ) : (
-                  /* Product grid — full-bleed image cards */
+                  /* Product grid. full-bleed image cards */
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                     {products[currentCat.key]?.map((product, idx) => (
                       <ProductPickCard
@@ -790,7 +790,7 @@ const PCBuild: React.FC = () => {
       </section>
 
       {/* ══════════════════════════════════════════════════════ */}
-      {/*  CTA SECTION — Black, same style as RepairHome CTA    */}
+      {/*  CTA SECTION. Black, same style as RepairHome CTA    */}
       {/* ══════════════════════════════════════════════════════ */}
       <section className="py-32 bg-black text-white overflow-hidden">
         <div className="max-w-5xl mx-auto px-6 text-center">

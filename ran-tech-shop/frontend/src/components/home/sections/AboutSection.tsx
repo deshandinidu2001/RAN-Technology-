@@ -82,7 +82,7 @@ const AboutSection = () => {
         <div className="absolute -bottom-40 left-0 w-[420px] h-[420px] rounded-full blur-[160px] bg-[#FF6B35]/[0.04]" />
       </div>
 
-      {/* Diagonal marquee text — drifts with scroll */}
+      {/* Diagonal marquee text. drifts with scroll */}
       <motion.div
         style={{ x: marqueeX }}
         className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 whitespace-nowrap select-none"
@@ -103,11 +103,11 @@ const AboutSection = () => {
                 className="h-px bg-gradient-to-r from-[#F7B500] to-[#FF6B35] block"
               />
               <span className="text-[#F7B500] text-[11px] tracking-[0.3em] uppercase font-medium">
-                About RAN — Est. 2015
+                About RAN, Est. 2015
               </span>
             </div>
 
-            {/* Heading — matches the shared shop home title style
+            {/* Heading. matches the shared shop home title style
                 ("text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black"
                  with an italic Georgia accent word in primary gold). */}
             <div className="mb-10">
@@ -125,7 +125,7 @@ const AboutSection = () => {
               </RevealHeading>
             </div>
 
-            {/* Body — line by line */}
+            {/* Body. line by line */}
             <div className="max-w-xl space-y-2 mb-14 overflow-hidden">
               {[
                 'Since 2015, RAN Technology has been at the forefront of',
@@ -149,7 +149,7 @@ const AboutSection = () => {
               ))}
             </div>
 
-            {/* Feature ledger — list, not grid: more editorial */}
+            {/* Feature ledger. list, not grid: more editorial */}
             <ul className="border-t border-white/[0.08]">
               {aboutFeatures.map((f, i) => (
                 <motion.li
@@ -217,7 +217,7 @@ const AboutSection = () => {
             </motion.div>
           </div>
 
-          {/* ── Right column — image with clip-path reveal ── */}
+          {/* ── Right column. image with clip-path reveal ── */}
           <div className="lg:col-span-5 lg:sticky lg:top-28">
             <motion.div
               ref={imageRef}

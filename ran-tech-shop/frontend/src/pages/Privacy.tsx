@@ -17,7 +17,7 @@ const Privacy: React.FC = () => (
           <h2 className="text-2xl font-semibold text-white mb-3">1. Information We Collect</h2>
           <p>
             RAN Technology collects information you provide directly when creating an account,
-            placing an order, or booking a repair — including your name, email, phone number,
+            placing an order, or booking a repair, including your name, email, phone number,
             and shipping address. We also collect basic device and usage data (browser type,
             pages visited) to improve the service.
           </p>
@@ -29,7 +29,7 @@ const Privacy: React.FC = () => (
             <li>To process orders, repair bookings, and payments.</li>
             <li>To contact you about your order, repair status, or support requests.</li>
             <li>To improve our website, products, and services.</li>
-            <li>To send promotional messages — only if you have opted in.</li>
+            <li>To send promotional messages only if you have opted in.</li>
           </ul>
         </section>
 
@@ -45,8 +45,8 @@ const Privacy: React.FC = () => (
         <section>
           <h2 className="text-2xl font-semibold text-white mb-3">4. Data Security</h2>
           <p>
-            We use industry-standard safeguards — encryption in transit, hashed passwords, and
-            access controls — to protect your information. No system is 100% secure, so please
+            We use industry-standard safeguards, including encryption in transit, hashed passwords, and
+            access controls to protect your information. No system is 100% secure, so please
             choose a strong password and keep it private.
           </p>
         </section>

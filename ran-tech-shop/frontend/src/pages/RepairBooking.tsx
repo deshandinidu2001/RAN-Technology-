@@ -140,7 +140,7 @@ const RepairBooking: React.FC = () => {
   }, []);
 
   // React to URL category changes (e.g. footer Category link clicked while
-  // already on this page — Router updates searchParams without a remount).
+  // already on this page. Router updates searchParams without a remount).
   useEffect(() => {
     const c = searchParams.get('category');
     const next = c && serviceCategories.some(sc => sc.id === c) ? c : 'all';
@@ -405,12 +405,12 @@ const RepairBooking: React.FC = () => {
                   </div>
                   <div className="grid grid-cols-3 gap-6 text-sm">
                     <div>
-                      <p className="text-white/30 text-xs mb-1">Mon – Fri</p>
-                      <p className="text-white/60 font-light">9AM – 6PM</p>
+                      <p className="text-white/30 text-xs mb-1">Mon - Fri</p>
+                      <p className="text-white/60 font-light">9AM - 6PM</p>
                     </div>
                     <div>
                       <p className="text-white/30 text-xs mb-1">Saturday</p>
-                      <p className="text-white/60 font-light">10AM – 4PM</p>
+                      <p className="text-white/60 font-light">10AM - 4PM</p>
                     </div>
                     <div>
                       <p className="text-white/30 text-xs mb-1">Sunday</p>

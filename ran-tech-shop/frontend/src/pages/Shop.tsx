@@ -199,7 +199,7 @@ const Shop: React.FC = () => {
   }, [products, selectedCategory, priceRange, sortBy, searchQuery]);
 
   // Pull filter state from the URL whenever it changes. This MUST run before
-  // any effect that writes back to the URL — otherwise an external navigation
+  // any effect that writes back to the URL. otherwise an external navigation
   // (e.g. footer category Link) is racing against our own writer, which fires
   // on every render because `setSearchParams` isn't stable. Keeping the URL as
   // the source of truth lets footer links seed the filters reliably.
@@ -213,7 +213,7 @@ const Shop: React.FC = () => {
   }, [searchParams]);
 
   // Mirror category/search/subcategory state back into the URL so manual filter
-  // changes are shareable. Excludes `setSearchParams` from deps — it's a fresh
+  // changes are shareable. Excludes `setSearchParams` from deps. it's a fresh
   // ref each render and would cause this effect to fire constantly, clobbering
   // params just placed in the URL by external navigation.
   useEffect(() => {
@@ -272,7 +272,7 @@ const Shop: React.FC = () => {
     { slug: 'monitors', name: 'Monitors', count: countCategory('monitors') },
     { slug: 'storage', name: 'Storage', count: countCategory('storage') },
     { slug: 'gaming', name: 'Gaming', count: countCategory('gaming') },
-    // PC build / components category — populates the configurator
+    // PC build / components category. populates the configurator
     { slug: 'components', name: 'PC Components', count: countCategory('components') },
   ];
 
@@ -305,7 +305,7 @@ const Shop: React.FC = () => {
     mockProducts.filter(p => p.subcategory?.toLowerCase() === slug).length;
 
   const allSubcategories = [
-    // PC components — surface the same parts the Custom Build configurator uses
+    // PC components. surface the same parts the Custom Build configurator uses
     { slug: 'processor', name: 'Processors', icon: BrainIcon, count: countSub('processor'), parent: 'components' },
     { slug: 'motherboard', name: 'Motherboards', icon: ComputerIcon, count: countSub('motherboard'), parent: 'components' },
     { slug: 'psu', name: 'Power Supplies', icon: BrainIcon, count: countSub('psu'), parent: 'components' },
@@ -407,7 +407,7 @@ const Shop: React.FC = () => {
             <div className="lg:col-span-4">
               <p className="text-white/40 text-sm leading-relaxed mb-5">
                 Discover our curated collection of premium tech accessories, gadgets, and peripherals
-                — handpicked by enthusiasts.
+                handpicked by enthusiasts.
               </p>
               <motion.button
                 onClick={() => navigate('/pc-build')}

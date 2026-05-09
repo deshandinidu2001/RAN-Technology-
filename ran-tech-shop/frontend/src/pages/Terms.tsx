@@ -44,7 +44,7 @@ const Terms: React.FC = () => (
           <p>
             Unused products may be returned within 7 days of delivery in original packaging.
             Custom builds and opened software are non-refundable. Refunds are processed within
-            7–14 business days to the original payment method.
+            7-14 business days to the original payment method.
           </p>
         </section>
 

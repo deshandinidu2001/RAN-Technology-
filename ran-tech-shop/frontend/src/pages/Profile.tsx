@@ -51,7 +51,7 @@ const Profile: React.FC = () => {
   const [editEmail, setEditEmail] = useState(user?.email || '');
   const [saveSuccess, setSaveSuccess] = useState(false);
 
-  // Repair bookings — merge API + local store (local is the source of truth in
+  // Repair bookings - merge API + local store (local is the source of truth in
   // this app; the API call is best-effort for cross-device sync).
   const [apiBookings, setApiBookings] = useState<RepairBooking[]>([]);
   const [bookingsLoading, setBookingsLoading] = useState(false);
@@ -169,10 +169,10 @@ const Profile: React.FC = () => {
   return (
     <div className="min-h-screen pt-24 pb-16 bg-[#0A0A0B]">
       <div className="container mx-auto px-4 max-w-6xl">
-        {/* Profile Header — split left/right */}
+        {/* Profile Header - split left/right */}
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-10">
           <div className="grid lg:grid-cols-2 gap-6 items-center">
-            {/* Left side — identity */}
+            {/* Left side - identity */}
             <div className="flex items-center gap-5">
               <div
                 className="w-16 h-16 flex items-center justify-center text-xl font-bold text-black flex-shrink-0"
@@ -187,7 +187,7 @@ const Profile: React.FC = () => {
               </div>
             </div>
 
-            {/* Right side — quick stats + sign out */}
+            {/* Right side - quick stats + sign out */}
             <div className="flex items-center justify-start lg:justify-end gap-6">
               <div className="grid grid-cols-3 gap-4">
                 <div className="text-center">
@@ -251,12 +251,12 @@ const Profile: React.FC = () => {
           ))}
         </motion.div>
 
-        {/* Tab Content — left/right split */}
+        {/* Tab Content - left/right split */}
         <motion.div key={activeTab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
           {/* Account Tab */}
           {activeTab === 'account' && (
             <div className="grid lg:grid-cols-2 gap-8">
-              {/* Left — personal info */}
+              {/* Left - personal info */}
               <div className="space-y-6">
                 {saveSuccess && (
                   <motion.div
@@ -346,7 +346,7 @@ const Profile: React.FC = () => {
                 </div>
               </div>
 
-              {/* Right — quick links + ongoing repair preview */}
+              {/* Right - quick links + ongoing repair preview */}
               <div className="space-y-6">
                 <div>
                   <h3 className="text-sm font-medium text-white/60 uppercase tracking-wider mb-4">Quick Links</h3>

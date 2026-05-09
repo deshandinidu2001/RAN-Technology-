@@ -118,12 +118,12 @@ const HeroVideoSection = () => {
         </motion.span>
       </AnimatePresence>
 
-      {/* ── Content — centered left ──────────────────────── */}
+      {/* ── Content - centered left ──────────────────────── */}
       <div className="relative z-10 h-full flex items-center inset-x-0 mx-auto w-full container px-4 lg:px-6 pb-28 md:pb-0">
         <div className="w-full max-w-3xl px-2 sm:px-4 lg:px-6">
           <AnimatePresence mode="wait">
             <motion.div key={`content-${active}`}>
-              {/* Heading — clean sans-serif */}
+              {/* Heading - clean sans-serif */}
               <motion.h1
                 initial={{ opacity: 0, y: 40 }}
                 animate={{ opacity: 1, y: 0, transition: { duration: 0.7, delay: 0.15 } }}

@@ -175,7 +175,7 @@ const RepairAbout: React.FC = () => {
                   RAN was founded on a simple belief: device repair shouldn't be mysterious or overpriced. Our certified technicians diagnose and fix with full transparency, so you always know what's happening with your device.
                 </p>
                 <p>
-                  From cracked screens to motherboard-level repairs, we handle it all in-house. No outsourcing, no guesswork — just skilled hands and the right tools.
+                  From cracked screens to motherboard-level repairs, we handle it all in-house. No outsourcing, no guesswork, just skilled hands and the right tools.
                 </p>
               </div>
               <motion.div

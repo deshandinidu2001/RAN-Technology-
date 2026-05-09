@@ -19,7 +19,7 @@ const initialsOf = (name: string) =>
     .map((p) => p[0]?.toUpperCase() ?? '')
     .join('') || '?';
 
-/* ─── Fallback review data – Sri Lankan customers ───────────────────── */
+/* ─── Fallback review data - Sri Lankan customers ───────────────────── */
 const fallbackReviews = [
   {
     id: 1,

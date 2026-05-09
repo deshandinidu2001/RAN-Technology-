@@ -9,7 +9,7 @@ const Footer: React.FC = () => {
   const isRepairRoute =
     location.pathname.startsWith('/repair') || location.pathname.startsWith('/pc-build');
 
-  // Social links are intentionally non-functional placeholders for now — the
+  // Social links are intentionally non-functional placeholders for now - the
   // brand accounts aren't live yet, so we keep the visual UI but suppress the
   // navigation. Updating any single URL here will re-enable that channel.
   const socialLinks = [
@@ -23,7 +23,7 @@ const Footer: React.FC = () => {
   };
 
   // When a footer link points to the page the user is already on, React Router
-  // doesn't trigger the layout's scroll-to-top effect — so scroll explicitly so
+  // doesn't trigger the layout's scroll-to-top effect - so scroll explicitly so
   // the click feels responsive (e.g. clicking "Repair Home" while already on
   // /repair-home now scrolls back up to the top of the page).
   const handleNavClick = (path: string) => () => {
@@ -91,7 +91,7 @@ const Footer: React.FC = () => {
               {description}
             </p>
             
-            {/* Social Icons — placeholder/inert until brand channels are live */}
+            {/* Social Icons - placeholder/inert until brand channels are live */}
             <div className="flex items-center gap-3 pt-2">
               {socialLinks.map((s) => (
                 <a

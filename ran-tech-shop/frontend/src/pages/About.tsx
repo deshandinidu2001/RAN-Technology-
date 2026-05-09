@@ -25,7 +25,7 @@ const About: React.FC = () => {
     {
       n: '02',
       title: 'Customer obsessed',
-      body: 'A real human is always one message away — no bots, no scripts, no waiting.',
+      body: 'A real human is always one message away. No bots, no scripts, no waiting.',
     },
     {
       n: '03',
@@ -44,7 +44,7 @@ const About: React.FC = () => {
     { year: '2021', title: '1K customers', body: 'First thousand orders shipped.' },
     { year: '2022', title: 'Catalogue x10', body: '500+ SKUs across every category.' },
     { year: '2023', title: 'Islandwide', body: 'Tracked delivery to all 25 districts.' },
-    { year: '2024', title: '10K orders', body: 'A milestone — and a beginning.' },
+    { year: '2024', title: '10K orders', body: 'A milestone and a beginning.' },
   ];
 
   const perks = [
@@ -87,7 +87,7 @@ const About: React.FC = () => {
             <motion.div {...fade} transition={{ delay: 0.15 }} className="lg:col-span-4">
               <p className="text-white/45 text-base leading-relaxed mb-6">
                 Founded by tech enthusiasts, for tech enthusiasts. We curate the best hardware from the
-                world's leading brands and deliver it islandwide — with the kind of care big retailers forgot.
+                world's leading brands and deliver it islandwide with the kind of care big retailers forgot.
               </p>
               <Link
                 to="/shop"
@@ -123,7 +123,7 @@ const About: React.FC = () => {
           <div className="grid lg:grid-cols-12 gap-10">
             <motion.div {...fade} className="lg:col-span-4">
               <p className="text-white/25 text-[11px] tracking-[0.2em] uppercase font-medium mb-4">
-                — Our Mission
+                Our Mission
               </p>
               <h2 className="text-3xl md:text-4xl font-black leading-tight">
                 Making premium tech{' '}
@@ -135,7 +135,7 @@ const About: React.FC = () => {
 
             <motion.div {...fade} transition={{ delay: 0.1 }} className="lg:col-span-7 lg:col-start-6">
               <p className="text-white/55 text-lg leading-relaxed mb-6">
-                Sri Lanka's tech landscape was built for resellers — not for the people actually using the gear.
+                Sri Lanka's tech landscape was built for resellers, not for the people actually using the gear.
                 Inflated margins, opaque sourcing, support that disappears the moment you click checkout.
               </p>
               <p className="text-white/35 text-base leading-relaxed">
@@ -152,7 +152,7 @@ const About: React.FC = () => {
         <div className="w-full max-w-[1440px] mx-auto px-6 sm:px-10 lg:px-16 xl:px-24">
           <motion.div {...fade} className="mb-14">
             <p className="text-white/25 text-[11px] tracking-[0.2em] uppercase font-medium mb-3">
-              — What We Stand For
+              What We Stand For
             </p>
             <h2 className="text-4xl md:text-5xl font-black leading-tight">Four principles.</h2>
           </motion.div>
@@ -185,7 +185,7 @@ const About: React.FC = () => {
         <div className="w-full max-w-[1440px] mx-auto px-6 sm:px-10 lg:px-16 xl:px-24">
           <motion.div {...fade} className="mb-14 max-w-2xl">
             <p className="text-white/25 text-[11px] tracking-[0.2em] uppercase font-medium mb-3">
-              — The Journey
+              The Journey
             </p>
             <h2 className="text-4xl md:text-5xl font-black leading-tight">
               Five years.{' '}
@@ -244,7 +244,7 @@ const About: React.FC = () => {
           <div className="grid lg:grid-cols-2 gap-16 items-start">
             <motion.div {...fade}>
               <p className="text-white/25 text-[11px] tracking-[0.2em] uppercase font-medium mb-3">
-                — Why RAN
+                Why RAN
               </p>
               <h2 className="text-4xl md:text-5xl font-black leading-tight mb-6">
                 Not just another{' '}

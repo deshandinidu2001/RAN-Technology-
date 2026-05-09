@@ -73,7 +73,7 @@ const Contact: React.FC = () => {
     {
       label: 'Phone',
       value: '070 343 9842',
-      sub: 'Mon–Fri · 9AM – 8PM',
+      sub: 'Mon-Fri · 9AM - 8PM',
       href: 'tel:0703439842',
       icon: (
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -95,8 +95,8 @@ const Contact: React.FC = () => {
     },
     {
       label: 'Hours',
-      value: 'Open today · 9AM – 8PM',
-      sub: 'Sat–Sun · 10AM – 6PM',
+      value: 'Open today · 9AM - 8PM',
+      sub: 'Sat-Sun · 10AM - 6PM',
       href: '#',
       icon: (
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -107,11 +107,11 @@ const Contact: React.FC = () => {
   ];
 
   const faqs = [
-    { q: 'What are your shipping options?', a: 'Standard (3–5 days), express (1–2 days), and same-day delivery within Sri Lanka.' },
+    { q: 'What are your shipping options?', a: 'Standard (3-5 days), express (1-2 days), and same-day delivery within Sri Lanka.' },
     { q: 'What is your return policy?', a: 'We accept returns within 30 days of purchase for unused items in original packaging. Full refund guaranteed.' },
     { q: 'How can I track my order?', a: "Once shipped, you'll receive an email and SMS with tracking info to monitor delivery in real-time." },
     { q: 'Do you offer warranty on products?', a: 'All products come with manufacturer warranty. Extended plans available on select items.' },
-    { q: 'Do you provide repair services?', a: 'Yes — laptop, desktop, smartphone, and peripheral repairs. Visit the Repair page or call 070 343 9842.' },
+    { q: 'Do you provide repair services?', a: 'Yes, laptop, desktop, smartphone, and peripheral repairs. Visit the Repair page or call 070 343 9842.' },
   ];
 
   const inputCls =
@@ -150,7 +150,7 @@ const Contact: React.FC = () => {
               transition={{ delay: 0.1 }}
               className="text-white/40 text-base md:text-lg leading-relaxed max-w-xl mt-8"
             >
-              Whether it's a question about an order, a quote on a custom build, or just a hello — we
+              Whether it's a question about an order, a quote on a custom build, or just a hello. We
               read every message and reply within 24 hours.
             </motion.p>
           </div>
@@ -192,7 +192,7 @@ const Contact: React.FC = () => {
             {/* Left intro */}
             <motion.div {...fade} className="lg:col-span-5">
               <p className="text-white/25 text-[11px] tracking-[0.2em] uppercase font-medium mb-4">
-                — Send a Message
+                Send a Message
               </p>
               <h2 className="text-3xl md:text-4xl lg:text-5xl font-black leading-tight mb-6">
                 Drop us a line.
@@ -428,7 +428,7 @@ const Contact: React.FC = () => {
           >
             <div className="aspect-[21/8] relative">
               <iframe
-                title="RAN Tech Shop — Monaragala"
+                title="RAN Tech Shop, Monaragala"
                 src="https://www.google.com/maps?q=Monaragala,+Sri+Lanka&z=13&output=embed"
                 className="absolute inset-0 w-full h-full border-0"
                 style={{ filter: 'invert(0.92) hue-rotate(180deg) saturate(0.6) brightness(0.95) contrast(0.95)' }}
@@ -451,7 +451,7 @@ const Contact: React.FC = () => {
           <div className="grid lg:grid-cols-12 gap-12">
             <motion.div {...fade} className="lg:col-span-4">
               <p className="text-white/25 text-[11px] tracking-[0.2em] uppercase font-medium mb-3">
-                — Support
+                Support
               </p>
               <h2 className="text-3xl md:text-4xl lg:text-5xl font-black leading-tight mb-4">
                 Frequently asked.

@@ -119,7 +119,7 @@ interface NewReviewForm { name: string; rating: number; text: string; device: st
 
 /* ─── Animation Helpers ──────────────────────────────────────── */
 
-/** Split-text reveal — words slide up from behind a mask */
+/** Split-text reveal. words slide up from behind a mask */
 const RevealText = ({ children, className = '', delay = 0 }: { children: string; className?: string; delay?: number }) => {
   const ref = useRef<HTMLDivElement>(null);
   const isInView = useInView(ref, { once: true, margin: '-50px' });
@@ -269,7 +269,7 @@ const RepairHome = () => {
               icon,
               title: p.name,
               description: p.description || '',
-              price: typeof p.price === 'number' ? `From Rs. ${p.price.toLocaleString()}` : 'From Rs. —',
+              price: typeof p.price === 'number' ? `From Rs. ${p.price.toLocaleString()}` : 'From Rs. ',
               image: p.image || FALLBACK_SERVICE_IMAGES[icon] || FALLBACK_SERVICE_IMAGES.Laptop,
             };
           }));
@@ -281,7 +281,7 @@ const RepairHome = () => {
             icon: pickUpgradeIcon(p.name || ''),
             title: p.name,
             description: p.description || '',
-            price: typeof p.price === 'number' ? `From Rs. ${p.price.toLocaleString()}` : 'From Rs. —',
+            price: typeof p.price === 'number' ? `From Rs. ${p.price.toLocaleString()}` : 'From Rs. ',
           })));
         }
       } catch {
@@ -420,7 +420,7 @@ const HeroSection = ({ navigate }: { navigate: (path: string) => void }) => {
           <span className="text-xs font-mono tracking-[0.3em] text-white/40 uppercase">Professional Device Repair</span>
         </motion.div>
 
-        {/* Main heading — masked word reveal */}
+        {/* Main heading. masked word reveal */}
         <div className="space-y-2 mb-12">
           <div className="overflow-hidden">
             <motion.h1 initial={{ y: '100%' }} animate={{ y: 0 }}
@@ -530,7 +530,7 @@ const MarqueeSection = () => (
   </section>
 );
 
-/* ─── Services — Image Card Grid ─────────────────────────────── */
+/* ─── Services. Image Card Grid ─────────────────────────────── */
 const ServicesSection = ({ navigate, services }: { navigate: (path: string) => void; services: ServiceItem[] }) => {
   const iconMap: Record<string, typeof Laptop> = { Laptop, Monitor, Smartphone, KeyboardIcon, Wrench, PcCase };
 
@@ -609,7 +609,7 @@ const ServicesSection = ({ navigate, services }: { navigate: (path: string) => v
                   </span>
                 </div>
 
-                {/* Icon — animated up on hover */}
+                {/* Icon. animated up on hover */}
                 <motion.div
                   className="absolute top-6 left-6 z-10 w-12 h-12 flex items-center justify-center border border-white/20 backdrop-blur-sm bg-black/40"
                   variants={{ hover: { y: -4, borderColor: 'rgba(255,255,255,0.6)' } }}
@@ -628,7 +628,7 @@ const ServicesSection = ({ navigate, services }: { navigate: (path: string) => v
                     {service.title}
                   </motion.h3>
 
-                  {/* Description — slides up on hover */}
+                  {/* Description. slides up on hover */}
                   <motion.p
                     className="text-xs text-white/60 leading-relaxed mb-4 line-clamp-2"
                     initial={{ opacity: 0.7 }}
@@ -695,7 +695,7 @@ const ProcessSection = () => {
 
   useEffect(() => {
     if (!ref.current || !pinRef.current) return;
-    // Skip pin/scrub on small screens — it traps mobile scroll & overlays content
+    // Skip pin/scrub on small screens. it traps mobile scroll & overlays content
     if (typeof window !== 'undefined' && window.innerWidth < 1024) {
       setActiveIndex(PROCESS_STEPS.length - 1);
       progress.set(1);

@@ -123,7 +123,7 @@ const BrandsSection = () => {
           className="relative text-center text-white/40 text-sm md:text-base max-w-2xl mx-auto mt-12 md:mt-16 px-6 leading-relaxed"
         >
           We partner with the world's most trusted technology brands to bring you authentic,
-          warrantied products — every device, every time.
+          warrantied products, every device, every time.
         </motion.p>
       </motion.div>
     </section>
