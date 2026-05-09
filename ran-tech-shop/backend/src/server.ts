@@ -12,8 +12,17 @@ import repairRoutes from './routes/repairs';
 // Load environment variables from the backend folder in both src and dist builds.
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 const bundledDatabaseUrl = `file:${path.resolve(__dirname, '../prisma/dev.db')}`;
-if (!process.env.DATABASE_URL || process.env.DATABASE_URL.startsWith('file:.')) {
-  process.env.DATABASE_URL = bundledDatabaseUrl;
+// In development default to an included SQLite DB when DATABASE_URL is missing.
+// In production we must NOT silently override DATABASE_URL — require it to be
+// provided via environment variables (Vercel project settings).
+if (process.env.NODE_ENV === 'development') {
+  if (!process.env.DATABASE_URL) {
+    process.env.DATABASE_URL = bundledDatabaseUrl;
+  }
+} else {
+  if (!process.env.DATABASE_URL) {
+    console.warn('⚠️  No DATABASE_URL set for production. Set DATABASE_URL in environment.');
+  }
 }
 
 // Initialize Prisma client
@@ -24,8 +33,18 @@ const app: Express = express();
 const PORT = process.env.PORT || 3001;
 
 // Middleware
+// Configure allowed CORS origins via `ALLOWED_ORIGINS` (comma-separated)
+// or `FRONTEND_URL`. If none provided, default to localhost origins for dev.
+const allowedFromEnv = (process.env.ALLOWED_ORIGINS || process.env.FRONTEND_URL || '')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
+const defaultLocalOrigins = ['http://localhost:5173', 'http://localhost:3000'];
+const corsOrigins = allowedFromEnv.length ? allowedFromEnv : defaultLocalOrigins;
+console.log('CORS allowed origins:', corsOrigins);
+
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000'],
+  origin: corsOrigins,
   credentials: true,
 }));
 app.use(express.json());
