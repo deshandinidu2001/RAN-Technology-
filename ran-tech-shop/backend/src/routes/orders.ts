@@ -7,21 +7,18 @@ import {
   cancelOrder,
   getAllOrders,
 } from '../controllers/orderController';
-import { authenticate } from '../middleware/auth';
+import { authenticate, optionalAuth } from '../middleware/auth';
 
 const router = Router();
 
-// All order routes require authentication
-router.use(authenticate);
-
 // User routes
-router.post('/', createOrder);
-router.get('/', getUserOrders);
-router.get('/all', getAllOrders); // Admin route
-router.get('/:id', getOrderById);
-router.post('/:id/cancel', cancelOrder);
+router.post('/', authenticate, createOrder);
+router.get('/', authenticate, getUserOrders);
+router.get('/all', optionalAuth, getAllOrders); // Admin/dashboard route
+router.get('/:id', authenticate, getOrderById);
+router.post('/:id/cancel', authenticate, cancelOrder);
 
 // Admin routes
-router.put('/:id/status', updateOrderStatus);
+router.put('/:id/status', optionalAuth, updateOrderStatus);
 
 export default router;

@@ -23,6 +23,7 @@ const PRODUCTS_PER_PAGE = 12;
 const Shop: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState<Product[]>([]);
+  const [catalogProducts, setCatalogProducts] = useState<Product[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -92,6 +93,21 @@ const Shop: React.FC = () => {
 
     fetchProducts();
   }, [selectedCategory, selectedSubcategory, selectedBrand, selectedRamType, selectedRamSpeed, selectedRamCapacity, selectedSsdType, selectedSsdCapacity, selectedCompatibility, searchQuery]);
+
+  useEffect(() => {
+    const fetchCatalogProducts = async () => {
+      try {
+        const response = await api.get('/products?limit=500&isService=false');
+        const apiProducts = response.data.products || response.data || [];
+        setCatalogProducts(Array.isArray(apiProducts) ? apiProducts : []);
+      } catch (error) {
+        console.error('Failed to fetch catalog products:', error);
+        setCatalogProducts(mockProducts as unknown as Product[]);
+      }
+    };
+
+    fetchCatalogProducts();
+  }, []);
 
   // Fetch filters for laptop accessories
   useEffect(() => {
@@ -220,11 +236,12 @@ const Shop: React.FC = () => {
     }
   };
 
-  // Count helper that includes both DB products and the static mock catalogue
-  // so a freshly-seeded DB still shows accurate filter counts.
+  const countSource = catalogProducts.length > 0
+    ? catalogProducts
+    : (mockProducts as unknown as Product[]);
+
   const countCategory = (slug: string) =>
-    products.filter(p => p.category?.toLowerCase() === slug).length ||
-    mockProducts.filter(p => p.category?.toLowerCase() === slug).length;
+    countSource.filter(p => p.category?.toLowerCase() === slug).length;
 
   const categories = [
     { slug: 'laptop-accessories', name: 'Laptop Accessories', count: countCategory('laptop-accessories') },
@@ -264,8 +281,7 @@ const Shop: React.FC = () => {
   );
 
   const countSub = (slug: string) =>
-    products.filter(p => p.subcategory?.toLowerCase() === slug).length ||
-    mockProducts.filter(p => p.subcategory?.toLowerCase() === slug).length;
+    countSource.filter(p => p.subcategory?.toLowerCase() === slug).length;
 
   const allSubcategories = [
     // PC components. surface the same parts the Custom Build configurator uses

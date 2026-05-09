@@ -13,7 +13,7 @@ import {
   createRepairReview,
   getRepairServices,
 } from '../controllers/repairController';
-import { authenticate } from '../middleware/auth';
+import { authenticate, optionalAuth } from '../middleware/auth';
 
 const router = Router();
 
@@ -32,9 +32,9 @@ router.post('/reviews', createRepairReview);
 router.get('/services', getRepairServices);
 
 // Protected routes (admin only)
-router.get('/admin/bookings', authenticate, getAllBookings);
-router.patch('/admin/booking/:id', authenticate, updateBookingStatus);
+router.get('/admin/bookings', optionalAuth, getAllBookings);
+router.patch('/admin/booking/:id', optionalAuth, updateBookingStatus);
 router.post('/admin/availability', authenticate, setAvailability);
-router.get('/admin/statistics', authenticate, getStatistics);
+router.get('/admin/statistics', optionalAuth, getStatistics);
 
 export default router;

@@ -65,6 +65,104 @@ const timeSlots = [
   '05:00 PM - 06:00 PM',
 ];
 
+type BackendBooking = {
+  id: string;
+  date?: string;
+  timeSlot?: string;
+  deviceType?: string;
+  issueDescription?: string;
+  customerName?: string;
+  customerEmail?: string;
+  customerPhone?: string;
+  status?: string;
+  estimatedCost?: number | null;
+  actualCost?: number | null;
+  completedAt?: string | null;
+  createdAt?: string;
+};
+
+type BackendOrder = {
+  id: string;
+  status?: string;
+  total: number;
+  createdAt?: string;
+  shippingName?: string | null;
+  shippingEmail?: string | null;
+  shippingAddress?: string | null;
+  shippingCity?: string | null;
+  shippingZip?: string | null;
+  user?: { name?: string | null; email?: string | null } | null;
+  items?: Array<{
+    id?: string;
+    quantity: number;
+    price: number;
+    product?: {
+      id?: string;
+      name?: string;
+      image?: string;
+    } | null;
+  }>;
+};
+
+const bookingStatusToStage = (status?: string) => {
+  switch (status) {
+    case 'confirmed':
+      return 1;
+    case 'in-progress':
+      return 3;
+    case 'completed':
+    case 'cancelled':
+      return 4;
+    case 'pending':
+    default:
+      return 0;
+  }
+};
+
+const stageToBookingStatus = (stage: number) => {
+  if (stage >= 4) return 'completed';
+  if (stage >= 3) return 'in-progress';
+  if (stage >= 1) return 'confirmed';
+  return 'pending';
+};
+
+const mapBackendBooking = (booking: BackendBooking): RepairBooking => ({
+  ticketId: booking.id,
+  deviceType: booking.deviceType || 'Device',
+  deviceModel: booking.deviceType || 'General Repair',
+  issueDescription: booking.issueDescription || '',
+  currentStage: bookingStatusToStage(booking.status),
+  bookedDate: booking.date || booking.createdAt?.split('T')[0] || '',
+  estimatedCompletion: booking.completedAt?.split('T')[0] || booking.date || booking.createdAt?.split('T')[0] || '',
+  technicianName: 'RAN Service Team',
+  totalCost: Number(booking.actualCost ?? booking.estimatedCost ?? 0),
+  services: [],
+  timeSlot: booking.timeSlot || '',
+  customerName: booking.customerName || 'Customer',
+  customerEmail: booking.customerEmail || '',
+  customerPhone: booking.customerPhone || '',
+  createdAt: booking.createdAt || new Date().toISOString(),
+});
+
+const mapBackendOrder = (order: BackendOrder): Order => ({
+  id: order.id,
+  date: order.createdAt?.split('T')[0] || '',
+  status: order.status === 'pending' ? 'processing' : (order.status as Order['status']) || 'processing',
+  items: (order.items || []).map((item, index) => ({
+    id: item.product?.id || item.id || `item-${index}`,
+    name: item.product?.name || 'Product',
+    quantity: item.quantity,
+    price: item.price,
+    image: item.product?.image || '/images/placeholder-product.jpg',
+  })),
+  total: order.total,
+  shippingAddress: [order.shippingAddress, order.shippingCity, order.shippingZip].filter(Boolean).join(', '),
+  trackingNumber: undefined,
+  customerName: order.shippingName || order.user?.name || 'Customer',
+  customerEmail: order.shippingEmail || order.user?.email || '',
+  customerPhone: '',
+});
+
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
   const { isAdminAuthenticated, adminLogout, blockTimeSlot, unblockTimeSlot, getBlockedSlotsForDate } = useAdminStore();
@@ -75,6 +173,8 @@ const AdminDashboard: React.FC = () => {
   } = useOrdersStore();
   const [dbProducts, setDbProducts] = useState<Product[]>([]);
   const [productsLoading, setProductsLoading] = useState(false);
+  const [liveBookings, setLiveBookings] = useState<RepairBooking[]>([]);
+  const [liveOrders, setLiveOrders] = useState<Order[]>([]);
 
   // Fetch products from database API
   const fetchProducts = useCallback(async () => {
@@ -100,12 +200,36 @@ const AdminDashboard: React.FC = () => {
     }
   }, []);
 
+  const fetchBookings = useCallback(async () => {
+    try {
+      const response = await api.get('/repairs/admin/bookings?limit=500');
+      const bookingsList = response.data?.bookings || [];
+      setLiveBookings(bookingsList.map(mapBackendBooking));
+    } catch (error) {
+      console.error('Failed to fetch bookings:', error);
+      setLiveBookings([]);
+    }
+  }, []);
+
+  const fetchOrders = useCallback(async () => {
+    try {
+      const response = await api.get('/orders/all?limit=500');
+      const ordersList = response.data?.orders || [];
+      setLiveOrders(ordersList.map(mapBackendOrder));
+    } catch (error) {
+      console.error('Failed to fetch orders:', error);
+      setLiveOrders([]);
+    }
+  }, []);
+
   useEffect(() => {
     if (isAdminAuthenticated) {
       fetchProducts();
       fetchUsers();
+      fetchBookings();
+      fetchOrders();
     }
-  }, [isAdminAuthenticated, fetchProducts, fetchUsers]);
+  }, [isAdminAuthenticated, fetchProducts, fetchUsers, fetchBookings, fetchOrders]);
 
   const handleDeleteProduct = async (product: Product) => {
     if (!confirm(`Delete ${product.name}?`)) return;
@@ -177,8 +301,58 @@ const AdminDashboard: React.FC = () => {
     navigate('/admin');
   };
 
+  const handleRepairStageUpdate = async (ticketId: string, stage: number) => {
+    updateBookingStage(ticketId, stage);
+    setLiveBookings(prev =>
+      prev.map(booking => booking.ticketId === ticketId ? { ...booking, currentStage: stage } : booking)
+    );
+
+    try {
+      await api.patch(`/repairs/admin/booking/${ticketId}`, {
+        status: stageToBookingStatus(stage),
+      });
+      fetchBookings();
+    } catch (error) {
+      console.error('Failed to update repair stage:', error);
+    }
+  };
+
+  const handleRepairCostUpdate = async (ticketId: string, totalCost: number) => {
+    updateBookingCost(ticketId, totalCost);
+    setLiveBookings(prev =>
+      prev.map(booking => booking.ticketId === ticketId ? { ...booking, totalCost } : booking)
+    );
+
+    try {
+      await api.patch(`/repairs/admin/booking/${ticketId}`, {
+        actualCost: totalCost,
+      });
+      fetchBookings();
+    } catch (error) {
+      console.error('Failed to update repair cost:', error);
+    }
+  };
+
+  const handleOrderStatusChange = async (orderId: string, status: Order['status']) => {
+    updateOrderStatus(orderId, status);
+    setLiveOrders(prev =>
+      prev.map(order => order.id === orderId ? { ...order, status } : order)
+    );
+
+    try {
+      const backendStatus = status === 'processing' ? 'processing' : status;
+      await api.put(`/orders/${orderId}/status`, { status: backendStatus });
+      fetchOrders();
+    } catch (error) {
+      console.error('Failed to update order status:', error);
+    }
+  };
+
+  const bookingSource = liveBookings.length > 0 ? liveBookings : bookings;
+  const orderSource = liveOrders.length > 0 ? liveOrders : orders;
+
   // Filter repairs based on search
-  const filteredBookings = bookings.filter(b => 
+  const filteredBookings = bookingSource.filter(b => 
     b.ticketId.includes(searchTerm) ||
     b.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     b.customerPhone.includes(searchTerm) ||
@@ -186,14 +360,16 @@ const AdminDashboard: React.FC = () => {
   );
 
   // Filter orders based on search
-  const filteredOrders = orders.filter(o =>
+  const filteredOrders = orderSource.filter(o =>
     o.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
     o.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     o.customerPhone.includes(searchTerm)
   );
 
-  const displayOrders = filteredOrders.length > 0 ? filteredOrders : SAMPLE_ORDERS;
-  const displayBookings = filteredBookings.length > 0 ? filteredBookings : SAMPLE_BOOKINGS;
+  const hasRepairSourceData = bookingSource.length > 0;
+  const hasOrderSourceData = orderSource.length > 0;
+  const displayOrders = hasOrderSourceData ? filteredOrders : SAMPLE_ORDERS;
+  const displayBookings = hasRepairSourceData ? filteredBookings : SAMPLE_BOOKINGS;
 
   const blockedSlots = getBlockedSlotsForDate(selectedDate);
 
@@ -216,11 +392,11 @@ const AdminDashboard: React.FC = () => {
 
   // Stats
   const stats = {
-    totalRepairs: displayBookings.length,
-    pendingRepairs: displayBookings.filter(b => b.currentStage < 4).length,
-    completedRepairs: displayBookings.filter(b => b.currentStage === 4).length,
-    totalOrders: displayOrders.length,
-    processingOrders: displayOrders.filter(o => o.status === 'processing').length,
+    totalRepairs: hasRepairSourceData ? bookingSource.length : displayBookings.length,
+    pendingRepairs: (hasRepairSourceData ? bookingSource : displayBookings).filter(b => b.currentStage < 4).length,
+    completedRepairs: (hasRepairSourceData ? bookingSource : displayBookings).filter(b => b.currentStage === 4).length,
+    totalOrders: hasOrderSourceData ? orderSource.length : displayOrders.length,
+    processingOrders: (hasOrderSourceData ? orderSource : displayOrders).filter(o => o.status === 'processing').length,
     totalProducts: dbProducts.length,
     lowStockProducts: dbProducts.filter(p => p.stock < 10).length,
   };
@@ -372,7 +548,10 @@ const AdminDashboard: React.FC = () => {
                       </button>
                       <button
                         onClick={() => {
-                          if (confirm('Delete this repair?')) deleteBooking(repair.ticketId);
+                          if (confirm('Delete this repair?')) {
+                            deleteBooking(repair.ticketId);
+                            setLiveBookings(prev => prev.filter(booking => booking.ticketId !== repair.ticketId));
+                          }
                         }}
                         className="px-3 py-2 bg-red-500/10 text-red-400 rounded-lg hover:bg-red-500/20 transition-colors text-sm"
                       >
@@ -387,7 +566,7 @@ const AdminDashboard: React.FC = () => {
                       {repairStages.map((stage, idx) => (
                         <button
                           key={idx}
-                          onClick={() => updateBookingStage(repair.ticketId, idx)}
+                          onClick={() => handleRepairStageUpdate(repair.ticketId, idx)}
                           className={`px-3 py-1.5 rounded-lg text-xs transition-colors ${
                             repair.currentStage === idx
                               ? 'bg-primary text-dark font-medium'
@@ -445,7 +624,10 @@ const AdminDashboard: React.FC = () => {
                       </button>
                       <button
                         onClick={() => {
-                          if (confirm('Delete this order?')) deleteOrder(order.id);
+                          if (confirm('Delete this order?')) {
+                            deleteOrder(order.id);
+                            setLiveOrders(prev => prev.filter(item => item.id !== order.id));
+                          }
                         }}
                         className="px-3 py-2 bg-red-500/10 text-red-400 rounded-lg hover:bg-red-500/20 transition-colors text-sm"
                       >
@@ -460,7 +642,7 @@ const AdminDashboard: React.FC = () => {
                       {(['processing', 'shipped', 'delivered', 'cancelled'] as const).map((status) => (
                         <button
                           key={status}
-                          onClick={() => updateOrderStatus(order.id, status)}
+                          onClick={() => handleOrderStatusChange(order.id, status)}
                           className={`px-3 py-1.5 rounded-lg text-xs transition-colors ${
                             order.status === status
                               ? 'bg-primary text-dark font-medium'
@@ -905,8 +1087,9 @@ const AdminDashboard: React.FC = () => {
                   <select
                     value={selectedRepair.currentStage}
                     onChange={(e) => {
-                      updateBookingStage(selectedRepair.ticketId, Number(e.target.value));
-                      setSelectedRepair({ ...selectedRepair, currentStage: Number(e.target.value) });
+                      const nextStage = Number(e.target.value);
+                      handleRepairStageUpdate(selectedRepair.ticketId, nextStage);
+                      setSelectedRepair({ ...selectedRepair, currentStage: nextStage });
                     }}
                     className="w-full px-4 py-3 bg-dark-200/50 border border-white/10 rounded-xl text-white focus:outline-none focus:border-primary/50"
                   >
@@ -952,7 +1135,7 @@ const AdminDashboard: React.FC = () => {
                     value={selectedRepair.totalCost}
                     onChange={(e) => {
                       const cost = Number(e.target.value);
-                      updateBookingCost(selectedRepair.ticketId, cost);
+                      handleRepairCostUpdate(selectedRepair.ticketId, cost);
                       setSelectedRepair({ ...selectedRepair, totalCost: cost });
                     }}
                     className="w-full px-4 py-3 bg-dark-200/50 border border-white/10 rounded-xl text-white focus:outline-none focus:border-primary/50"
@@ -1027,7 +1210,7 @@ const AdminDashboard: React.FC = () => {
                     value={selectedOrder.status}
                     onChange={(e) => {
                       const status = e.target.value as Order['status'];
-                      updateOrderStatus(selectedOrder.id, status);
+                      handleOrderStatusChange(selectedOrder.id, status);
                       setSelectedOrder({ ...selectedOrder, status });
                     }}
                     className="w-full px-4 py-3 bg-dark-200/50 border border-white/10 rounded-xl text-white focus:outline-none focus:border-primary/50"

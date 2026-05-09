@@ -39,7 +39,14 @@ const ProductShowcase = () => {
       try {
         const response = await api.get('/products/featured');
         const data = response.data;
-        const productsList = data.products || data;
+        let productsList = data.products || data;
+
+        if (!Array.isArray(productsList) || productsList.length === 0) {
+          const fallbackResponse = await api.get('/products?limit=6&isService=false');
+          const fallbackData = fallbackResponse.data;
+          productsList = fallbackData.products || fallbackData;
+        }
+
         if (Array.isArray(productsList)) {
           setProducts(productsList.slice(0, 6));
         }
