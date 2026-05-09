@@ -1,0 +1,219 @@
+
+> ran-tech-shop-frontend@1.0.0 build
+> tsc -b && vite build
+
+src/components/account/AccountDashboard.tsx(467,100): error TS1005: ')' expected.
+src/components/account/AccountDashboard.tsx(467,101): error TS1005: ':' expected.
+src/components/account/AccountDashboard.tsx(467,109): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+src/components/account/AccountDashboard.tsx(467,113): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+src/components/account/AccountDashboard.tsx(467,114): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+src/components/account/AccountDashboard.tsx(469,32): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+src/components/home/animations/BlurText.tsx(58,61): error TS1005: '}' expected.
+src/components/home/animations/BlurText.tsx(58,78): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+src/components/home/animations/GhostCursor.tsx(58,42): error TS1005: '}' expected.
+src/components/home/animations/GhostCursor.tsx(58,50): error TS1005: ',' expected.
+src/components/home/animations/GhostCursor.tsx(58,51): error TS1443: Module declaration names may only use ' or " quoted strings.
+src/components/home/animations/GhostCursor.tsx(79,43): error TS1005: ',' expected.
+src/components/home/animations/GhostCursor.tsx(79,47): error TS1005: ',' expected.
+src/components/home/animations/GhostCursor.tsx(79,53): error TS1005: ',' expected.
+src/components/home/animations/GhostCursor.tsx(79,57): error TS1005: ',' expected.
+src/components/home/animations/GhostCursor.tsx(79,63): error TS1005: ',' expected.
+src/components/home/animations/GhostCursor.tsx(79,67): error TS1005: ',' expected.
+src/components/home/animations/GhostCursor.tsx(79,73): error TS1005: ',' expected.
+src/components/home/animations/GhostCursor.tsx(79,80): error TS1005: ',' expected.
+src/components/home/animations/GhostCursor.tsx(79,95): error TS1005: '(' expected.
+src/components/home/animations/GhostCursor.tsx(79,97): error TS1443: Module declaration names may only use ' or " quoted strings.
+src/components/home/animations/GhostCursor.tsx(88,32): error TS1005: ',' expected.
+src/components/home/animations/GhostCursor.tsx(88,36): error TS1005: ',' expected.
+src/components/home/animations/GhostCursor.tsx(88,42): error TS1005: ',' expected.
+src/components/home/animations/GhostCursor.tsx(88,46): error TS1005: ',' expected.
+src/components/home/animations/GhostCursor.tsx(88,52): error TS1005: ',' expected.
+src/components/home/animations/GhostCursor.tsx(88,56): error TS1005: ',' expected.
+src/components/home/animations/GhostCursor.tsx(88,62): error TS1005: ',' expected.
+src/components/home/animations/GhostCursor.tsx(131,1): error TS1160: Unterminated template literal.
+src/components/home/animations/GlareHover.tsx(31,20): error TS1005: ',' expected.
+src/components/home/animations/GlareHover.tsx(31,24): error TS1005: ',' expected.
+src/components/home/animations/GlareHover.tsx(32,20): error TS1005: ',' expected.
+src/components/home/animations/GlareHover.tsx(32,24): error TS1005: ',' expected.
+src/components/home/animations/MetaBalls.tsx(48,28): error TS1005: ')' expected.
+src/components/home/animations/MetaBalls.tsx(48,31): error TS1005: ':' expected.
+src/components/home/animations/MetaBalls.tsx(49,11): error TS1005: ',' expected.
+src/components/home/animations/MetaBalls.tsx(49,28): error TS1005: ')' expected.
+src/components/home/animations/MetaBalls.tsx(50,15): error TS1005: ';' expected.
+src/components/home/animations/MetaBalls.tsx(51,8): error TS1005: ',' expected.
+src/components/home/animations/MetaBalls.tsx(51,9): error TS1005: ';' expected.
+src/components/home/animations/MetaBalls.tsx(57,22): error TS1005: ',' expected.
+src/components/home/animations/MetaBalls.tsx(57,26): error TS1005: ',' expected.
+src/components/home/animations/MetaBalls.tsx(58,22): error TS1005: ',' expected.
+src/components/home/animations/MetaBalls.tsx(58,26): error TS1005: ',' expected.
+src/components/home/animations/MetaBalls.tsx(80,49): error TS1005: ')' expected.
+src/components/home/animations/MetaBalls.tsx(80,70): error TS1005: ';' expected.
+src/components/home/animations/MetaBalls.tsx(80,72): error TS1109: Expression expected.
+src/components/home/animations/MetaBalls.tsx(81,49): error TS1005: ')' expected.
+src/components/home/animations/MetaBalls.tsx(81,70): error TS1005: ';' expected.
+src/components/home/animations/MetaBalls.tsx(81,72): error TS1109: Expression expected.
+src/components/home/animations/MetaBalls.tsx(96,32): error TS1005: ',' expected.
+src/components/home/animations/MetaBalls.tsx(96,36): error TS1005: ',' expected.
+src/components/home/animations/MetaBalls.tsx(97,32): error TS1005: ',' expected.
+src/components/home/animations/MetaBalls.tsx(97,36): error TS1005: ',' expected.
+src/components/home/animations/MetaBalls.tsx(158,3): error TS1128: Declaration or statement expected.
+src/components/home/animations/MetaBalls.tsx(158,4): error TS1128: Declaration or statement expected.
+src/components/home/animations/MetaBalls.tsx(158,133): error TS1005: ';' expected.
+src/components/home/animations/MetaBalls.tsx(167,1): error TS1128: Declaration or statement expected.
+src/components/home/animations/TiltedCard.tsx(34,25): error TS1005: ',' expected.
+src/components/home/animations/TiltedCard.tsx(34,29): error TS1005: ',' expected.
+src/components/home/animations/TiltedCard.tsx(35,25): error TS1005: ',' expected.
+src/components/home/animations/TiltedCard.tsx(35,29): error TS1005: ',' expected.
+src/components/home/animations/TiltedCard.tsx(39,23): error TS1005: ')' expected.
+src/components/home/animations/TiltedCard.tsx(39,30): error TS1005: ',' expected.
+src/components/home/animations/TiltedCard.tsx(39,41): error TS1005: ',' expected.
+src/components/home/animations/TiltedCard.tsx(39,43): error TS1134: Variable declaration expected.
+src/components/home/animations/TiltedCard.tsx(40,29): error TS1005: ')' expected.
+src/components/home/animations/TiltedCard.tsx(40,30): error TS1005: ',' expected.
+src/components/home/animations/TiltedCard.tsx(40,32): error TS1134: Variable declaration expected.
+src/components/home/animations/TiltedCard.tsx(40,41): error TS1005: ';' expected.
+src/components/home/animations/TiltedCard.tsx(40,43): error TS1109: Expression expected.
+src/components/home/animations/TiltedCard.tsx(47,15): error TS1005: ',' expected.
+src/components/home/animations/TiltedCard.tsx(88,1): error TS1128: Declaration or statement expected.
+src/components/home/sections/HeroVideoSection.tsx(54,44): error TS1005: ',' expected.
+src/components/home/sections/ProductShowcase.tsx(109,51): error TS1005: ')' expected.
+src/components/home/sections/ProductShowcase.tsx(109,57): error TS1005: ',' expected.
+src/components/home/sections/ProductShowcase.tsx(109,74): error TS1005: ',' expected.
+src/components/home/sections/ProductShowcase.tsx(110,13): error TS1005: ';' expected.
+src/components/home/sections/ProductShowcase.tsx(111,22): error TS1005: ';' expected.
+src/components/home/sections/ProductShowcase.tsx(113,16): error TS1005: ';' expected.
+src/components/home/sections/ProductShowcase.tsx(114,14): error TS1005: ';' expected.
+src/components/home/sections/ProductShowcase.tsx(115,14): error TS1005: ';' expected.
+src/components/home/sections/ProductShowcase.tsx(116,16): error TS1005: ';' expected.
+src/components/home/sections/ProductShowcase.tsx(117,24): error TS1005: ';' expected.
+src/components/home/sections/ProductShowcase.tsx(140,15): error TS1005: ',' expected.
+src/components/home/sections/ProductShowcase.tsx(302,1): error TS1128: Declaration or statement expected.
+src/components/home/sections/StatsSection.tsx(77,46): error TS1005: ')' expected.
+src/components/home/sections/StatsSection.tsx(77,69): error TS1134: Variable declaration expected.
+src/components/home/sections/StatsSection.tsx(77,70): error TS1005: ';' expected.
+src/components/home/sections/StatsSection.tsx(80,30): error TS1005: ',' expected.
+src/components/home/sections/StatsSection.tsx(80,34): error TS1005: ',' expected.
+src/components/home/sections/StatsSection.tsx(80,38): error TS1005: ',' expected.
+src/components/home/sections/StatsSection.tsx(80,41): error TS1005: ')' expected.
+src/components/home/sections/StatsSection.tsx(80,52): error TS1005: ';' expected.
+src/components/home/sections/StatsSection.tsx(89,3): error TS1128: Declaration or statement expected.
+src/components/home/sections/StatsSection.tsx(89,4): error TS1128: Declaration or statement expected.
+src/components/home/sections/StatsSection.tsx(89,24): error TS1005: ';' expected.
+src/components/home/sections/StatsSection.tsx(96,1): error TS1128: Declaration or statement expected.
+src/components/repair/RepairStatusTracker.tsx(444,93): error TS1005: ')' expected.
+src/components/repair/RepairStatusTracker.tsx(444,94): error TS1005: ':' expected.
+src/components/repair/RepairStatusTracker.tsx(444,102): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+src/components/repair/RepairStatusTracker.tsx(444,106): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+src/components/repair/RepairStatusTracker.tsx(444,107): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+src/components/repair/RepairStatusTracker.tsx(446,20): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+src/components/repair/RepairStatusTracker.tsx(521,85): error TS1005: ')' expected.
+src/components/repair/RepairStatusTracker.tsx(521,86): error TS1005: ':' expected.
+src/components/repair/RepairStatusTracker.tsx(521,94): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+src/components/repair/RepairStatusTracker.tsx(522,21): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+src/components/repair/RepairStatusTracker.tsx(522,22): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+src/components/repair/RepairStatusTracker.tsx(524,20): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+src/components/shop/ProductCard.tsx(23,25): error TS1005: ',' expected.
+src/components/shop/ProductCard.tsx(23,29): error TS1005: ',' expected.
+src/components/shop/ProductCard.tsx(24,25): error TS1005: ',' expected.
+src/components/shop/ProductCard.tsx(24,29): error TS1005: ',' expected.
+src/components/shop/ProductCard.tsx(29,19): error TS1005: ')' expected.
+src/components/shop/ProductCard.tsx(29,26): error TS1005: ',' expected.
+src/components/shop/ProductCard.tsx(30,14): error TS1005: ';' expected.
+src/components/shop/ProductCard.tsx(30,25): error TS1005: ')' expected.
+src/components/shop/ProductCard.tsx(30,26): error TS1128: Declaration or statement expected.
+src/components/shop/ProductCard.tsx(30,28): error TS1161: Unterminated regular expression literal.
+src/components/shop/ProductCard.tsx(32,11): error TS1005: ';' expected.
+src/components/shop/ProductCard.tsx(33,5): error TS1109: Expression expected.
+src/components/shop/ProductCard.tsx(33,6): error TS1005: ',' expected.
+src/components/shop/ProductCard.tsx(37,21): error TS1005: ')' expected.
+src/components/shop/ProductCard.tsx(37,22): error TS1005: ',' expected.
+src/components/shop/ProductCard.tsx(38,10): error TS1005: ';' expected.
+src/components/shop/ProductCard.tsx(38,21): error TS1005: ')' expected.
+src/components/shop/ProductCard.tsx(38,22): error TS1128: Declaration or statement expected.
+src/components/shop/ProductCard.tsx(38,24): error TS1161: Unterminated regular expression literal.
+src/components/shop/ProductCard.tsx(40,7): error TS1109: Expression expected.
+src/components/shop/ProductCard.tsx(40,8): error TS1128: Declaration or statement expected.
+src/components/shop/ProductCard.tsx(42,3): error TS1128: Declaration or statement expected.
+src/components/shop/ProductCard.tsx(192,1): error TS1128: Declaration or statement expected.
+src/components/shop/ProductModal.tsx(127,71): error TS1005: ',' expected.
+src/components/ui/PixelBlast.tsx(30,40): error TS1005: ')' expected.
+src/components/ui/PixelBlast.tsx(30,41): error TS1005: ',' expected.
+src/components/ui/PixelBlast.tsx(30,43): error TS1005: ',' expected.
+src/components/ui/PixelBlast.tsx(30,52): error TS1005: '(' expected.
+src/components/ui/PixelBlast.tsx(33,48): error TS1005: ')' expected.
+src/components/ui/PixelBlast.tsx(33,49): error TS1005: ';' expected.
+src/components/ui/PixelBlast.tsx(35,43): error TS1005: ',' expected.
+src/components/ui/PixelBlast.tsx(45,19): error TS1005: ',' expected.
+src/components/ui/PixelBlast.tsx(45,33): error TS1005: ',' expected.
+src/components/ui/PixelBlast.tsx(53,25): error TS1005: ',' expected.
+src/components/ui/PixelBlast.tsx(53,29): error TS1005: ',' expected.
+src/components/ui/PixelBlast.tsx(54,25): error TS1005: ',' expected.
+src/components/ui/PixelBlast.tsx(54,29): error TS1005: ',' expected.
+src/components/ui/PixelBlast.tsx(67,31): error TS1005: ',' expected.
+src/components/ui/PixelBlast.tsx(67,40): error TS1005: ')' expected.
+src/components/ui/PixelBlast.tsx(67,45): error TS1005: ';' expected.
+src/components/ui/PixelBlast.tsx(69,42): error TS1005: ')' expected.
+src/components/ui/PixelBlast.tsx(69,47): error TS1005: ',' expected.
+src/components/ui/PixelBlast.tsx(69,52): error TS1005: ',' expected.
+src/components/ui/PixelBlast.tsx(69,60): error TS1005: ';' expected.
+src/components/ui/PixelBlast.tsx(507,31): error TS1005: ')' expected.
+src/components/ui/PixelBlast.tsx(507,35): error TS1005: ',' expected.
+src/components/ui/PixelBlast.tsx(507,40): error TS1005: ',' expected.
+src/components/ui/PixelBlast.tsx(508,44): error TS1005: ',' expected.
+src/components/ui/PixelBlast.tsx(565,5): error TS1128: Declaration or statement expected.
+src/components/ui/PixelBlast.tsx(565,7): error TS1128: Declaration or statement expected.
+src/components/ui/PixelBlast.tsx(604,3): error TS1128: Declaration or statement expected.
+src/components/ui/PixelBlast.tsx(604,4): error TS1128: Declaration or statement expected.
+src/components/ui/PixelBlast.tsx(625,4): error TS1005: ';' expected.
+src/components/ui/PixelBlast.tsx(635,1): error TS1128: Declaration or statement expected.
+src/pages/Checkout.tsx(193,96): error TS1005: ',' expected.
+src/pages/Home.tsx(39,40): error TS1005: ',' expected.
+src/pages/Landing.tsx(14,40): error TS1005: ',' expected.
+src/pages/PCBuild.tsx(488,99): error TS1005: ',' expected.
+src/pages/PCBuild.tsx(537,68): error TS1005: ',' expected.
+src/pages/PCBuild.tsx(549,57): error TS1005: '}' expected.
+src/pages/PCBuild.tsx(569,20): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+src/pages/ProductDetail.tsx(58,32): error TS1005: ',' expected.
+src/pages/ProductDetail.tsx(58,36): error TS1005: ',' expected.
+src/pages/ProductDetail.tsx(58,44): error TS1005: ',' expected.
+src/pages/ProductDetail.tsx(58,45): error TS1109: Expression expected.
+src/pages/ProductDetail.tsx(257,69): error TS1005: ',' expected.
+src/pages/ProductDetail.tsx(388,12): error TS17008: JSX element 'div' has no corresponding closing tag.
+src/pages/ProductDetail.tsx(424,51): error TS1005: '}' expected.
+src/pages/ProductDetail.tsx(425,23): error TS1005: ',' expected.
+src/pages/ProductDetail.tsx(425,69): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+src/pages/ProductDetail.tsx(426,21): error TS1382: Unexpected token. Did you mean `{'>'}` or `&gt;`?
+src/pages/ProductDetail.tsx(430,21): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+src/pages/ProductDetail.tsx(431,19): error TS17002: Expected corresponding JSX closing tag for 'motion.div'.
+src/pages/ProductDetail.tsx(432,15): error TS1005: ')' expected.
+src/pages/ProductDetail.tsx(433,14): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+src/pages/ProductDetail.tsx(551,11): error TS17002: Expected corresponding JSX closing tag for 'div'.
+src/pages/ProductDetail.tsx(552,7): error TS1005: ')' expected.
+src/pages/ProductDetail.tsx(553,5): error TS1109: Expression expected.
+src/pages/ProductDetail.tsx(554,3): error TS1109: Expression expected.
+src/pages/ProductDetail.tsx(555,1): error TS1128: Declaration or statement expected.
+src/pages/RepairHome.tsx(145,26): error TS1005: ')' expected.
+src/pages/RepairHome.tsx(145,36): error TS1005: ',' expected.
+src/pages/RepairHome.tsx(145,58): error TS1005: ';' expected.
+src/pages/RepairHome.tsx(146,26): error TS1005: ')' expected.
+src/pages/RepairHome.tsx(146,35): error TS1005: ',' expected.
+src/pages/RepairHome.tsx(146,58): error TS1005: ';' expected.
+src/pages/RepairHome.tsx(189,79): error TS1005: ',' expected.
+src/pages/RepairHome.tsx(520,55): error TS1005: ',' expected.
+src/pages/Shop.tsx(140,55): error TS1005: ',' expected.
+src/pages/Shop.tsx(141,56): error TS1005: ',' expected.
+src/pages/Shop.tsx(143,76): error TS1005: ',' expected.
+src/pages/Shop.tsx(197,35): error TS1005: ')' expected.
+src/pages/Shop.tsx(197,36): error TS1005: ';' expected.
+src/pages/Shop.tsx(197,38): error TS1109: Expression expected.
+src/pages/Shop.tsx(205,40): error TS1005: ')' expected.
+src/pages/Shop.tsx(205,41): error TS1005: ';' expected.
+src/pages/Shop.tsx(205,75): error TS1005: ',' expected.
+src/pages/Shop.tsx(205,89): error TS1005: ',' expected.
+src/pages/Shop.tsx(205,103): error TS1005: ',' expected.
+src/pages/Shop.tsx(206,5): error TS1128: Declaration or statement expected.
+src/pages/Shop.tsx(206,43): error TS1005: ',' expected.
+src/pages/Shop.tsx(208,3): error TS1128: Declaration or statement expected.
+src/pages/Shop.tsx(229,70): error TS1005: ',' expected.
+src/pages/Shop.tsx(332,69): error TS1005: ',' expected.
+src/pages/Shop.tsx(355,1): error TS1128: Declaration or statement expected.

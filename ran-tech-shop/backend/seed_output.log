@@ -1,0 +1,27 @@
+Environment variables loaded from .env
+Running seed command `ts-node prisma/seed.ts` ...
+≡ƒî▒ Starting seed...
+Γ£à Created demo user: demo@ran-tech.com
+≡ƒùæ∩╕Å Cleared existing data
+Γ£à Created 100 products
+PrismaClientKnownRequestError: 
+Invalid `prisma.review.create()` invocation in
+C:\Users\desha\OneDrive\Documents\ran\ran-tech-shop\backend\prisma\seed.ts:1761:25
+
+  1758 ];
+  1759 
+  1760 for (const review of reviews) {
+ΓåÆ 1761   await prisma.review.create(
+Foreign key constraint violated: `foreign key`
+    at $n.handleRequestError (C:\Users\desha\OneDrive\Documents\ran\ran-tech-shop\backend\node_modules\@prisma\client\runtime\library.js:121:7315)
+    at $n.handleAndLogRequestError (C:\Users\desha\OneDrive\Documents\ran\ran-tech-shop\backend\node_modules\@prisma\client\runtime\library.js:121:6623)
+    at $n.request (C:\Users\desha\OneDrive\Documents\ran\ran-tech-shop\backend\node_modules\@prisma\client\runtime\library.js:121:6307)
+    at async l (C:\Users\desha\OneDrive\Documents\ran\ran-tech-shop\backend\node_modules\@prisma\client\runtime\library.js:130:9633)
+    at async main (C:\Users\desha\OneDrive\Documents\ran\ran-tech-shop\backend\prisma\seed.ts:1761:5) {
+  code: 'P2003',
+  clientVersion: '5.22.0',
+  meta: { modelName: 'Review', field_name: 'foreign key' }
+}
+
+An error occurred while running the seed command:
+Error: Command failed with exit code 1: ts-node prisma/seed.ts

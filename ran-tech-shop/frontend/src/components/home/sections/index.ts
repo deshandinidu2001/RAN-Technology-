@@ -1,0 +1,11 @@
+export { default as HeroVideoSection } from './HeroVideoSection';
+export { default as ServicesSection } from './ServicesSection';
+export { default as StatsSection } from './StatsSection';
+export { default as ProductShowcase } from './ProductShowcase';
+export { default as AboutSection } from './AboutSection';
+export { default as TestimonialsSection } from './TestimonialsSection';
+export { default as CTASection } from './CTASection';
+export { default as BrandsSection } from './BrandsSection';
+export { default as RepairSection } from './RepairSection';
+export { default as VideoShowcaseSection } from './VideoShowcaseSection';
+export { default as FooterSection } from './FooterSection';
