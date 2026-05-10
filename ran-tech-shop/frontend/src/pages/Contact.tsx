@@ -300,7 +300,7 @@ const Contact: React.FC = () => {
                             onChange={handleChange}
                             required
                             className={inputCls}
-                            placeholder="John Doe"
+                            placeholder="Deshan Dinidu"
                           />
                         </div>
                         <div>
@@ -314,7 +314,7 @@ const Contact: React.FC = () => {
                             onChange={handleChange}
                             required
                             className={inputCls}
-                            placeholder="john@example.com"
+                            placeholder="deshandinidu@gmail.com"
                           />
                         </div>
                       </div>

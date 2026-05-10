@@ -247,7 +247,7 @@ const RepairContact: React.FC = () => {
                             onChange={handleChange}
                             required
                             className="w-full px-0 py-3 bg-transparent border-b border-black/20 text-black placeholder-black/20 focus:outline-none focus:border-black transition-colors"
-                            placeholder="John Doe"
+                            placeholder="Deshan Dinidu"
                           />
                         </div>
                         <div>
@@ -259,7 +259,7 @@ const RepairContact: React.FC = () => {
                             onChange={handleChange}
                             required
                             className="w-full px-0 py-3 bg-transparent border-b border-black/20 text-black placeholder-black/20 focus:outline-none focus:border-black transition-colors"
-                            placeholder="john@example.com"
+                            placeholder="deshandinidu@gmail.com"
                           />
                         </div>
                       </div>

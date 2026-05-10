@@ -109,7 +109,7 @@ const RegisterForm: React.FC = () => {
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="John Doe"
+          placeholder="Deshan Dinidu"
           error={errors.name}
           leftIcon={
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

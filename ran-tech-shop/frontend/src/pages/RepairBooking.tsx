@@ -555,7 +555,7 @@ const RepairBooking: React.FC = () => {
                         <label className="text-xs text-white/30 uppercase tracking-wider">Full Name</label>
                       </div>
                       <input type="text" value={customerName} onChange={e => setCustomerName(e.target.value)}
-                        placeholder="John Doe"
+                        placeholder="Deshan Dinidu"
                         className="w-full py-4 bg-transparent border-b border-white/10 text-white text-sm placeholder-white/20 focus:border-white/40 focus:outline-none transition-colors"
                       />
                     </div>
@@ -565,7 +565,7 @@ const RepairBooking: React.FC = () => {
                         <label className="text-xs text-white/30 uppercase tracking-wider">Email</label>
                       </div>
                       <input type="email" value={customerEmail} onChange={e => setCustomerEmail(e.target.value)}
-                        placeholder="john@example.com"
+                        placeholder="deshandinidu@gmail.com"
                         className="w-full py-4 bg-transparent border-b border-white/10 text-white text-sm placeholder-white/20 focus:border-white/40 focus:outline-none transition-colors"
                       />
                     </div>
@@ -575,7 +575,7 @@ const RepairBooking: React.FC = () => {
                         <label className="text-xs text-white/30 uppercase tracking-wider">Phone</label>
                       </div>
                       <input type="tel" value={customerPhone} onChange={e => setCustomerPhone(e.target.value)}
-                        placeholder="+94 123-456-789"
+                        placeholder="+94 77 343 9842"
                         className="w-full py-4 bg-transparent border-b border-white/10 text-white text-sm placeholder-white/20 focus:border-white/40 focus:outline-none transition-colors"
                       />
                     </div>

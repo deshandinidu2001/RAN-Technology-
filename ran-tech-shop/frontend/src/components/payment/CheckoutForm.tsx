@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import Input from '../ui/Input';
 import Button from '../ui/Button';
+import { useAuthStore } from '../../store/authStore';
 
 interface ShippingInfo {
   name: string;
@@ -18,14 +19,25 @@ interface CheckoutFormProps {
 }
 
 const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSubmit, isLoading }) => {
+  const { user } = useAuthStore();
   const [shippingInfo, setShippingInfo] = useState<ShippingInfo>({
-    name: '',
-    email: '',
+    name: user?.name || '',
+    email: user?.email || '',
     address: '',
     city: '',
     state: '',
     zip: '',
   });
+
+  // Seed name/email from the logged-in user without overwriting manual edits
+  useEffect(() => {
+    if (!user) return;
+    setShippingInfo((p) => ({
+      ...p,
+      name: p.name || user.name || '',
+      email: p.email || user.email || '',
+    }));
+  }, [user]);
 
   const [errors, setErrors] = useState<Partial<ShippingInfo>>({});
 
@@ -84,7 +96,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSubmit, isLoading }) => {
               label="Full Name"
               value={shippingInfo.name}
               onChange={handleChange('name')}
-              placeholder="John Doe"
+              placeholder="Deshan Dinidu"
               error={errors.name}
             />
           </div>
@@ -95,7 +107,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSubmit, isLoading }) => {
               type="email"
               value={shippingInfo.email}
               onChange={handleChange('email')}
-              placeholder="john@example.com"
+              placeholder="deshandinidu@gmail.com"
               error={errors.email}
             />
           </div>
@@ -105,7 +117,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSubmit, isLoading }) => {
               label="Street Address"
               value={shippingInfo.address}
               onChange={handleChange('address')}
-              placeholder="123 Main Street, Apt 4B"
+              placeholder="Ella Road, Wellawaya"
               error={errors.address}
             />
           </div>
@@ -114,23 +126,23 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSubmit, isLoading }) => {
             label="City"
             value={shippingInfo.city}
             onChange={handleChange('city')}
-            placeholder="New York"
+            placeholder="Wellawaya"
             error={errors.city}
           />
 
           <Input
-            label="State / Province"
+            label="Province"
             value={shippingInfo.state}
             onChange={handleChange('state')}
-            placeholder="NY"
+            placeholder="Uva Province"
             error={errors.state}
           />
 
           <Input
-            label="ZIP / Postal Code"
+            label="Postal Code"
             value={shippingInfo.zip}
             onChange={handleChange('zip')}
-            placeholder="10001"
+            placeholder="91200"
             error={errors.zip}
           />
         </div>
