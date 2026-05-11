@@ -1,12 +1,12 @@
 import { Request, Response } from 'express';
-import { prisma } from '../server';
+import { supabase } from '../lib/supabase';
 
 // Default time slots
 const defaultTimeSlots = [
   { id: '1', time: '09:00 AM - 10:00 AM', available: true },
   { id: '2', time: '10:00 AM - 11:00 AM', available: true },
   { id: '3', time: '11:00 AM - 12:00 PM', available: true },
-  { id: '4', time: '12:00 PM - 01:00 PM', available: false }, // Lunch break
+  { id: '4', time: '12:00 PM - 01:00 PM', available: false },
   { id: '5', time: '02:00 PM - 03:00 PM', available: true },
   { id: '6', time: '03:00 PM - 04:00 PM', available: true },
   { id: '7', time: '04:00 PM - 05:00 PM', available: true },
@@ -17,42 +17,36 @@ const defaultTimeSlots = [
 export const getAvailability = async (req: Request, res: Response): Promise<void> => {
   try {
     const { date } = req.query;
-
     if (!date || typeof date !== 'string') {
       res.status(400).json({ error: 'Date is required' });
       return;
     }
 
-    // Get existing bookings for the date
-    const existingBookings = await prisma.repairBooking.findMany({
-      where: {
-        date: date,
-        status: { not: 'cancelled' },
-      },
-      select: {
-        timeSlot: true,
-      },
-    });
+    const { data: existingBookings, error: bookingsErr } = await supabase
+      .from('RepairBooking')
+      .select('timeSlot')
+      .eq('date', date)
+      .neq('status', 'cancelled');
+    if (bookingsErr) throw bookingsErr;
 
-    const bookedSlots = existingBookings.map(b => b.timeSlot);
+    const bookedSlots = (existingBookings ?? []).map((b: any) => b.timeSlot);
 
-    // Check if there's custom availability for this date
-    const customAvailability = await prisma.shopAvailability.findUnique({
-      where: { date: date },
-    });
+    const { data: customAvailability } = await supabase
+      .from('ShopAvailability')
+      .select('slots')
+      .eq('date', date)
+      .maybeSingle();
 
     let slots = defaultTimeSlots;
-
     if (customAvailability) {
       try {
-        slots = JSON.parse(customAvailability.slots);
+        slots = JSON.parse((customAvailability as any).slots);
       } catch {
         slots = defaultTimeSlots;
       }
     }
 
-    // Mark booked slots as unavailable
-    const availableSlots = slots.map(slot => ({
+    const availableSlots = slots.map((slot) => ({
       ...slot,
       available: slot.available && !bookedSlots.includes(slot.time),
     }));
@@ -61,7 +55,7 @@ export const getAvailability = async (req: Request, res: Response): Promise<void
       date,
       slots: availableSlots,
       bookedCount: bookedSlots.length,
-      availableCount: availableSlots.filter(s => s.available).length,
+      availableCount: availableSlots.filter((s) => s.available).length,
     });
   } catch (error) {
     console.error('Error getting availability:', error);
@@ -73,48 +67,48 @@ export const getAvailability = async (req: Request, res: Response): Promise<void
 export const createBooking = async (req: Request, res: Response): Promise<void> => {
   try {
     const {
-      date,
-      timeSlot,
-      deviceType,
-      issueDescription,
-      customerName,
-      customerEmail,
-      customerPhone,
+      date, timeSlot, deviceType, issueDescription,
+      customerName, customerEmail, customerPhone, totalAmount,
     } = req.body;
 
-    // Validate required fields
-    if (!date || !timeSlot || !deviceType || !issueDescription || !customerName || !customerEmail || !customerPhone) {
+    if (
+      !date || !timeSlot || !deviceType ||
+      !customerName || !customerEmail || !customerPhone
+    ) {
       res.status(400).json({ error: 'All fields are required' });
       return;
     }
 
-    // Check if slot is still available
-    const existingBooking = await prisma.repairBooking.findFirst({
-      where: {
-        date,
-        timeSlot,
-        status: { not: 'cancelled' },
-      },
-    });
+    const { data: existingBooking } = await supabase
+      .from('RepairBooking')
+      .select('id')
+      .eq('date', date)
+      .eq('timeSlot', timeSlot)
+      .neq('status', 'cancelled')
+      .maybeSingle();
 
     if (existingBooking) {
       res.status(409).json({ error: 'This time slot is no longer available' });
       return;
     }
 
-    // Create the booking
-    const booking = await prisma.repairBooking.create({
-      data: {
+    const { data: booking, error } = await supabase
+      .from('RepairBooking')
+      .insert({
         date,
         timeSlot,
         deviceType,
-        issueDescription,
+        issueDescription: issueDescription || '',
         customerName,
         customerEmail,
         customerPhone,
+        estimatedCost: totalAmount || null,
         status: 'pending',
-      },
-    });
+      })
+      .select('*')
+      .single();
+
+    if (error || !booking) throw error ?? new Error('Insert returned no row');
 
     res.status(201).json({
       success: true,
@@ -138,35 +132,32 @@ export const createBooking = async (req: Request, res: Response): Promise<void> 
 export const getAllBookings = async (req: Request, res: Response): Promise<void> => {
   try {
     const { status, date, page = '1', limit = '10' } = req.query;
+    const pageNum = parseInt(page as string, 10);
+    const limitNum = parseInt(limit as string, 10);
+    const from = (pageNum - 1) * limitNum;
+    const to = from + limitNum - 1;
 
-    const where: any = {};
-    if (status && typeof status === 'string') {
-      where.status = status;
-    }
-    if (date && typeof date === 'string') {
-      where.date = date;
-    }
+    let query = supabase
+      .from('RepairBooking')
+      .select('*', { count: 'exact' })
+      .order('date', { ascending: true })
+      .order('timeSlot', { ascending: true })
+      .range(from, to);
 
-    const skip = (parseInt(page as string) - 1) * parseInt(limit as string);
-    const take = parseInt(limit as string);
+    if (status && typeof status === 'string') query = query.eq('status', status);
+    if (date && typeof date === 'string') query = query.eq('date', date);
 
-    const [bookings, total] = await Promise.all([
-      prisma.repairBooking.findMany({
-        where,
-        orderBy: [{ date: 'asc' }, { timeSlot: 'asc' }],
-        skip,
-        take,
-      }),
-      prisma.repairBooking.count({ where }),
-    ]);
+    const { data, error, count } = await query;
+    if (error) throw error;
 
+    const total = count ?? 0;
     res.json({
-      bookings,
+      bookings: data ?? [],
       pagination: {
         total,
-        page: parseInt(page as string),
-        limit: parseInt(limit as string),
-        pages: Math.ceil(total / parseInt(limit as string)),
+        page: pageNum,
+        limit: limitNum,
+        pages: Math.ceil(total / limitNum),
       },
     });
   } catch (error) {
@@ -179,16 +170,16 @@ export const getAllBookings = async (req: Request, res: Response): Promise<void>
 export const getBookingById = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-
-    const booking = await prisma.repairBooking.findUnique({
-      where: { id },
-    });
-
+    const { data: booking, error } = await supabase
+      .from('RepairBooking')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+    if (error) throw error;
     if (!booking) {
       res.status(404).json({ error: 'Booking not found' });
       return;
     }
-
     res.json({ booking });
   } catch (error) {
     console.error('Error getting booking:', error);
@@ -196,22 +187,27 @@ export const getBookingById = async (req: Request, res: Response): Promise<void>
   }
 };
 
-// Get bookings by email (for customers)
+// Get bookings by email or phone (for customers — used by the status tracker)
 export const getBookingsByEmail = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { email } = req.query;
+    const { email, phone } = req.query;
+    let query = supabase
+      .from('RepairBooking')
+      .select('*')
+      .order('createdAt', { ascending: false });
 
-    if (!email || typeof email !== 'string') {
-      res.status(400).json({ error: 'Email is required' });
+    if (email && typeof email === 'string') {
+      query = query.eq('customerEmail', email);
+    } else if (phone && typeof phone === 'string') {
+      query = query.eq('customerPhone', phone);
+    } else {
+      res.status(400).json({ error: 'Email or phone is required' });
       return;
     }
 
-    const bookings = await prisma.repairBooking.findMany({
-      where: { customerEmail: email },
-      orderBy: { createdAt: 'desc' },
-    });
-
-    res.json({ bookings });
+    const { data, error } = await query;
+    if (error) throw error;
+    res.json({ bookings: data ?? [] });
   } catch (error) {
     console.error('Error getting bookings:', error);
     res.status(500).json({ error: 'Failed to get bookings' });
@@ -230,23 +226,27 @@ export const updateBookingStatus = async (req: Request, res: Response): Promise<
       return;
     }
 
-    const updateData: any = {};
-    if (status) updateData.status = status;
-    if (notes !== undefined) updateData.notes = notes;
-    if (estimatedCost !== undefined) updateData.estimatedCost = estimatedCost;
-    if (actualCost !== undefined) updateData.actualCost = actualCost;
-    if (status === 'completed') updateData.completedAt = new Date();
+    const updates: Record<string, unknown> = {};
+    if (status) updates.status = status;
+    if (notes !== undefined) updates.notes = notes;
+    if (estimatedCost !== undefined) updates.estimatedCost = estimatedCost;
+    if (actualCost !== undefined) updates.actualCost = actualCost;
+    if (status === 'completed') updates.completedAt = new Date().toISOString();
 
-    const booking = await prisma.repairBooking.update({
-      where: { id },
-      data: updateData,
-    });
+    const { data: booking, error } = await supabase
+      .from('RepairBooking')
+      .update(updates)
+      .eq('id', id)
+      .select('*')
+      .maybeSingle();
 
-    res.json({
-      success: true,
-      message: 'Booking updated successfully',
-      booking,
-    });
+    if (error) throw error;
+    if (!booking) {
+      res.status(404).json({ error: 'Booking not found' });
+      return;
+    }
+
+    res.json({ success: true, message: 'Booking updated successfully', booking });
   } catch (error) {
     console.error('Error updating booking:', error);
     res.status(500).json({ error: 'Failed to update booking' });
@@ -259,31 +259,36 @@ export const cancelBooking = async (req: Request, res: Response): Promise<void> 
     const { id } = req.params;
     const { email } = req.body;
 
-    const booking = await prisma.repairBooking.findUnique({
-      where: { id },
-    });
+    const { data: booking, error: fetchError } = await supabase
+      .from('RepairBooking')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
 
+    if (fetchError) throw fetchError;
     if (!booking) {
       res.status(404).json({ error: 'Booking not found' });
       return;
     }
 
-    // Verify email matches (for customer cancellation)
-    if (email && booking.customerEmail !== email) {
+    if (email && (booking as any).customerEmail !== email) {
       res.status(403).json({ error: 'Unauthorized to cancel this booking' });
       return;
     }
 
-    // Check if booking can be cancelled
-    if (['completed', 'cancelled'].includes(booking.status)) {
+    if (['completed', 'cancelled'].includes((booking as any).status)) {
       res.status(400).json({ error: 'This booking cannot be cancelled' });
       return;
     }
 
-    const updatedBooking = await prisma.repairBooking.update({
-      where: { id },
-      data: { status: 'cancelled' },
-    });
+    const { data: updatedBooking, error: updateError } = await supabase
+      .from('RepairBooking')
+      .update({ status: 'cancelled' })
+      .eq('id', id)
+      .select('*')
+      .single();
+
+    if (updateError) throw updateError;
 
     res.json({
       success: true,
@@ -296,26 +301,39 @@ export const cancelBooking = async (req: Request, res: Response): Promise<void> 
   }
 };
 
+// Hard-delete a booking (admin)
+export const deleteBooking = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { error } = await supabase.from('RepairBooking').delete().eq('id', id);
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting booking:', error);
+    res.status(500).json({ error: 'Failed to delete booking' });
+  }
+};
+
 // Set shop availability for a date (admin)
 export const setAvailability = async (req: Request, res: Response): Promise<void> => {
   try {
     const { date, slots } = req.body;
-
     if (!date || !slots) {
       res.status(400).json({ error: 'Date and slots are required' });
       return;
     }
 
-    const availability = await prisma.shopAvailability.upsert({
-      where: { date },
-      update: { slots: JSON.stringify(slots) },
-      create: { date, slots: JSON.stringify(slots) },
-    });
+    const { data, error } = await supabase
+      .from('ShopAvailability')
+      .upsert({ date, slots: JSON.stringify(slots) }, { onConflict: 'date' })
+      .select('*')
+      .single();
 
+    if (error) throw error;
     res.json({
       success: true,
       message: 'Availability updated successfully',
-      availability,
+      availability: data,
     });
   } catch (error) {
     console.error('Error setting availability:', error);
@@ -328,31 +346,38 @@ export const getStatistics = async (_req: Request, res: Response): Promise<void>
   try {
     const today = new Date().toISOString().split('T')[0];
 
+    const countQuery = (filter?: (q: any) => any) => {
+      let q = supabase.from('RepairBooking').select('id', { count: 'exact', head: true });
+      if (filter) q = filter(q);
+      return q;
+    };
+
     const [
-      totalBookings,
-      pendingBookings,
-      completedBookings,
-      todayBookings,
-      recentBookings,
+      { count: totalBookings },
+      { count: pendingBookings },
+      { count: completedBookings },
+      { count: todayBookings },
+      { data: recentBookings },
     ] = await Promise.all([
-      prisma.repairBooking.count(),
-      prisma.repairBooking.count({ where: { status: 'pending' } }),
-      prisma.repairBooking.count({ where: { status: 'completed' } }),
-      prisma.repairBooking.count({ where: { date: today } }),
-      prisma.repairBooking.findMany({
-        orderBy: { createdAt: 'desc' },
-        take: 5,
-      }),
+      countQuery(),
+      countQuery((q) => q.eq('status', 'pending')),
+      countQuery((q) => q.eq('status', 'completed')),
+      countQuery((q) => q.eq('date', today)),
+      supabase
+        .from('RepairBooking')
+        .select('*')
+        .order('createdAt', { ascending: false })
+        .limit(5),
     ]);
 
     res.json({
       statistics: {
-        totalBookings,
-        pendingBookings,
-        completedBookings,
-        todayBookings,
+        totalBookings: totalBookings ?? 0,
+        pendingBookings: pendingBookings ?? 0,
+        completedBookings: completedBookings ?? 0,
+        todayBookings: todayBookings ?? 0,
       },
-      recentBookings,
+      recentBookings: recentBookings ?? [],
     });
   } catch (error) {
     console.error('Error getting statistics:', error);
@@ -365,35 +390,30 @@ export const getRepairReviews = async (req: Request, res: Response): Promise<voi
   try {
     const { serviceType, serviceName, limit = '10' } = req.query;
 
-    const where: any = {};
+    let reviewsQuery = supabase
+      .from('RepairReview')
+      .select('*')
+      .order('createdAt', { ascending: false })
+      .limit(parseInt(limit as string, 10));
     if (serviceType && typeof serviceType === 'string') {
-      where.serviceType = serviceType;
+      reviewsQuery = reviewsQuery.eq('serviceType', serviceType);
     }
     if (serviceName && typeof serviceName === 'string') {
-      where.serviceName = serviceName;
+      reviewsQuery = reviewsQuery.eq('serviceName', serviceName);
     }
 
-    const reviews = await prisma.repairReview.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-      take: parseInt(limit as string, 10),
-    });
+    const { data: reviews, error: reviewsErr } = await reviewsQuery;
+    if (reviewsErr) throw reviewsErr;
 
-    // Get average ratings by service type
-    const allReviews = await prisma.repairReview.findMany({
-      select: {
-        serviceType: true,
-        serviceName: true,
-        rating: true,
-      },
-    });
+    const { data: allReviews, error: allErr } = await supabase
+      .from('RepairReview')
+      .select('serviceType, serviceName, rating');
+    if (allErr) throw allErr;
 
     const ratingsByService: Record<string, { total: number; count: number }> = {};
-    allReviews.forEach(review => {
+    (allReviews ?? []).forEach((review: any) => {
       const key = review.serviceName;
-      if (!ratingsByService[key]) {
-        ratingsByService[key] = { total: 0, count: 0 };
-      }
+      if (!ratingsByService[key]) ratingsByService[key] = { total: 0, count: 0 };
       ratingsByService[key].total += review.rating;
       ratingsByService[key].count += 1;
     });
@@ -405,7 +425,7 @@ export const getRepairReviews = async (req: Request, res: Response): Promise<voi
     }));
 
     res.json({
-      reviews,
+      reviews: reviews ?? [],
       averageRatings,
     });
   } catch (error) {
@@ -418,31 +438,23 @@ export const getRepairReviews = async (req: Request, res: Response): Promise<voi
 export const createRepairReview = async (req: Request, res: Response): Promise<void> => {
   try {
     const { serviceType, serviceName, userName, rating, comment } = req.body;
-
     if (!serviceType || !serviceName || !userName || !rating || !comment) {
       res.status(400).json({ error: 'All fields are required' });
       return;
     }
-
     if (rating < 1 || rating > 5) {
       res.status(400).json({ error: 'Rating must be between 1 and 5' });
       return;
     }
 
-    const review = await prisma.repairReview.create({
-      data: {
-        serviceType,
-        serviceName,
-        userName,
-        rating,
-        comment,
-      },
-    });
+    const { data: review, error } = await supabase
+      .from('RepairReview')
+      .insert({ serviceType, serviceName, userName, rating, comment })
+      .select('*')
+      .single();
+    if (error || !review) throw error ?? new Error('Insert returned no row');
 
-    res.status(201).json({
-      success: true,
-      review,
-    });
+    res.status(201).json({ success: true, review });
   } catch (error) {
     console.error('Error creating repair review:', error);
     res.status(500).json({ error: 'Failed to create review' });
@@ -454,17 +466,19 @@ export const getRepairServices = async (req: Request, res: Response): Promise<vo
   try {
     const { serviceType } = req.query;
 
-    const where: any = { isService: true };
+    let query = supabase
+      .from('Product')
+      .select('*')
+      .eq('isService', true)
+      .order('name', { ascending: true });
+
     if (serviceType && typeof serviceType === 'string') {
-      where.serviceType = serviceType;
+      query = query.eq('serviceType', serviceType);
     }
 
-    const services = await prisma.product.findMany({
-      where,
-      orderBy: { name: 'asc' },
-    });
-
-    res.json({ services });
+    const { data, error } = await query;
+    if (error) throw error;
+    res.json({ services: data ?? [] });
   } catch (error) {
     console.error('Error getting repair services:', error);
     res.status(500).json({ error: 'Failed to get repair services' });

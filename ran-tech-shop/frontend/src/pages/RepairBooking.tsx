@@ -7,6 +7,8 @@ import { useAdminStore } from '../store/adminStore';
 import { ArrowRight, ArrowLeft, Check, Clock, Calendar, User, Mail, Phone, ChevronDown } from 'lucide-react';
 import api from '../utils/api';
 import type { Product } from '../types';
+import RepairPartPicker, { detectPartConfig, type SelectedPart, type PartPickerConfig } from '../components/repair/RepairPartPicker';
+import EmailQuoteButton from '../components/ui/EmailQuoteButton';
 
 /* ─── Types ───────────────────────────────────────────────────── */
 interface TimeSlot { id: string; time: string; available: boolean }
@@ -125,6 +127,8 @@ const RepairBooking: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [services, setServices] = useState<Product[]>([]);
   const [servicesLoading, setServicesLoading] = useState(true);
+  const [selectedParts, setSelectedParts] = useState<Record<string, SelectedPart>>({});
+  const [pickerService, setPickerService] = useState<{ service: Product; config: PartPickerConfig } | null>(null);
 
   const availableDates = getAvailableDates();
 
@@ -172,10 +176,43 @@ const RepairBooking: React.FC = () => {
     : services.filter(s => getCategoryServiceTypes(selectedCategory).includes(s.serviceType || ''));
 
   const getSelectedServiceObjects = () => services.filter(s => selectedServices.includes(s.id));
-  const calculateTotal = () => getSelectedServiceObjects().reduce((t, s) => t + normalizePrice(s.price), 0);
-  const toggleService = (id: string) => setSelectedServices(prev =>
-    prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
-  );
+  const calculateTotal = () => getSelectedServiceObjects().reduce((t, s) => {
+    const partsTotal = selectedParts[s.id]?.partsTotal || 0;
+    return t + normalizePrice(s.price) + partsTotal;
+  }, 0);
+  const toggleService = (id: string) => {
+    setSelectedServices(prev => {
+      const isRemoving = prev.includes(id);
+      if (isRemoving) {
+        // Removing a service also clears its part selection.
+        setSelectedParts(p => { const n = { ...p }; delete n[id]; return n; });
+        return prev.filter(x => x !== id);
+      }
+      // Adding: open part picker if this service needs one.
+      const svc = services.find(s => s.id === id);
+      if (svc) {
+        const cfg = detectPartConfig({ name: svc.name, price: normalizePrice(svc.price), serviceType: svc.serviceType, compatibility: (svc as any).compatibility });
+        if (cfg) setPickerService({ service: svc, config: cfg });
+      }
+      return [...prev, id];
+    });
+  };
+  const openPartPicker = (svc: Product) => {
+    const cfg = detectPartConfig({ name: svc.name, price: normalizePrice(svc.price), serviceType: svc.serviceType, compatibility: (svc as any).compatibility });
+    if (cfg) setPickerService({ service: svc, config: cfg });
+  };
+  const buildQuoteItems = () => {
+    const out: { name: string; description?: string; quantity?: number; price: number }[] = [];
+    getSelectedServiceObjects().forEach(s => {
+      const part = selectedParts[s.id];
+      const desc = part?.laptop ? `For ${part.laptop.brand || ''} ${part.laptop.name}`.trim() : undefined;
+      out.push({ name: s.name, description: desc, price: normalizePrice(s.price) });
+      if (part?.product) {
+        out.push({ name: `↳ ${part.product.name}`, description: part.product.brand || undefined, price: Number(part.product.price) });
+      }
+    });
+    return out;
+  };
 
   const handleSubmit = async () => {
     setIsLoading(true);
@@ -191,8 +228,9 @@ const RepairBooking: React.FC = () => {
       });
       setBookingTicketId(ticketId);
       try { await api.post('/repairs/book', {
-        date: selectedDate, timeSlot: selectedTimeSlot, services: selectedServices,
-        totalAmount: calculateTotal(), issueDescription, customerName, customerEmail, customerPhone,
+        date: selectedDate, timeSlot: selectedTimeSlot, deviceType: 'Laptop',
+        issueDescription, customerName, customerEmail, customerPhone,
+        totalAmount: calculateTotal(),
       }); } catch { /* local save succeeded */ }
       setBookingSuccess(true);
     } catch { setError('Failed to create booking.'); } finally { setIsLoading(false); }
@@ -510,14 +548,54 @@ const RepairBooking: React.FC = () => {
                       <span className="text-white font-mono">Rs. {formatPrice(calculateTotal())}</span>
                     </div>
                     <div className="space-y-2">
-                      {getSelectedServiceObjects().map(s => (
-                        <div key={s.id} className="flex justify-between py-2 border-b border-white/5 last:border-0">
-                          <span className="text-white/60 text-sm">{s.name}</span>
-                          <span className="text-white/40 text-sm font-mono">Rs. {formatPrice(s.price)}</span>
-                        </div>
-                      ))}
+                      {getSelectedServiceObjects().map(s => {
+                        const part = selectedParts[s.id];
+                        const cfg = detectPartConfig({ name: s.name, price: normalizePrice(s.price), serviceType: s.serviceType, compatibility: (s as any).compatibility });
+                        return (
+                          <div key={s.id} className="py-2 border-b border-white/5 last:border-0">
+                            <div className="flex justify-between">
+                              <span className="text-white/60 text-sm">{s.name}</span>
+                              <span className="text-white/40 text-sm font-mono">Rs. {formatPrice(s.price)}</span>
+                            </div>
+                            {cfg && (
+                              <div className="mt-2 pl-3 border-l border-white/10 text-xs">
+                                {part?.laptop && (
+                                  <div className="text-white/40">For: <span className="text-white/70">{part.laptop.brand} {part.laptop.name}</span></div>
+                                )}
+                                {part?.product && (
+                                  <div className="flex justify-between text-white/40 mt-0.5">
+                                    <span>↳ {part.product.name}</span>
+                                    <span className="font-mono">Rs. {formatPrice(part.product.price)}</span>
+                                  </div>
+                                )}
+                                <button onClick={() => openPartPicker(s)}
+                                  className="text-[10px] uppercase tracking-wider text-white/50 hover:text-white mt-1"
+                                >
+                                  {part?.product || part?.laptop ? 'Change selection' : 'Select part'}
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </motion.div>
+                )}
+
+                {/* Email quote on services step */}
+                {selectedServices.length > 0 && (
+                  <div className="flex justify-end">
+                    <EmailQuoteButton
+                      type="repair"
+                      items={buildQuoteItems()}
+                      total={calculateTotal()}
+                      defaultEmail={customerEmail}
+                      defaultName={customerName}
+                      meta={{ Date: selectedDate || undefined, Time: selectedTimeSlot || undefined }}
+                      notes={issueDescription || undefined}
+                      label="Email me this quote"
+                    />
+                  </div>
                 )}
 
                 {/* Notes */}
@@ -624,12 +702,26 @@ const RepairBooking: React.FC = () => {
                   {/* Services */}
                   <div className="p-6">
                     <p className="text-[10px] text-white/30 uppercase tracking-wider mb-4">Services</p>
-                    {getSelectedServiceObjects().map(s => (
-                      <div key={s.id} className="flex justify-between py-2.5 border-b border-white/5 last:border-0">
-                        <span className="text-white/70 text-sm">{s.name}</span>
-                        <span className="text-white text-sm font-mono">Rs. {formatPrice(s.price)}</span>
-                      </div>
-                    ))}
+                    {getSelectedServiceObjects().map(s => {
+                      const part = selectedParts[s.id];
+                      return (
+                        <div key={s.id} className="py-2.5 border-b border-white/5 last:border-0">
+                          <div className="flex justify-between">
+                            <span className="text-white/70 text-sm">{s.name}</span>
+                            <span className="text-white text-sm font-mono">Rs. {formatPrice(s.price)}</span>
+                          </div>
+                          {part?.laptop && (
+                            <p className="text-xs text-white/40 mt-1">For: {part.laptop.brand} {part.laptop.name}</p>
+                          )}
+                          {part?.product && (
+                            <div className="flex justify-between text-xs text-white/50 mt-1">
+                              <span>↳ {part.product.name}</span>
+                              <span className="font-mono">Rs. {formatPrice(part.product.price)}</span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                     <div className="flex justify-between pt-4 mt-2">
                       <span className="text-white font-medium">Total</span>
                       <span className="text-white font-medium text-xl">Rs. {formatPrice(calculateTotal())}</span>
@@ -648,10 +740,21 @@ const RepairBooking: React.FC = () => {
                   <div className="border border-white/10 p-4 text-white/60 text-sm">{error}</div>
                 )}
 
-                <div className="flex justify-between">
+                <div className="flex justify-between items-center flex-wrap gap-3">
                   <button onClick={() => setStep(3)}
                     className="flex items-center gap-3 px-8 py-4 border border-white/10 text-white text-sm font-medium hover:bg-white/5 transition-colors"
                   ><ArrowLeft className="w-4 h-4" /> Back</button>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <EmailQuoteButton
+                      type="repair"
+                      items={buildQuoteItems()}
+                      total={calculateTotal()}
+                      defaultEmail={customerEmail}
+                      defaultName={customerName}
+                      meta={{ Date: selectedDate || undefined, Time: selectedTimeSlot || undefined, Phone: customerPhone || undefined }}
+                      notes={issueDescription || undefined}
+                      label="Email me this quote"
+                    />
                   <button onClick={handleSubmit} disabled={isLoading}
                     className="group flex items-center gap-3 px-10 py-4 bg-white text-black text-sm font-medium disabled:opacity-50 transition-opacity"
                   >
@@ -663,6 +766,7 @@ const RepairBooking: React.FC = () => {
                       <>Confirm Booking <Check className="w-4 h-4" /></>
                     )}
                   </button>
+                  </div>
                 </div>
               </motion.div>
             )}
@@ -692,6 +796,17 @@ const RepairBooking: React.FC = () => {
           </div>
         </div>
       </section>
+
+      {/* Part picker modal */}
+      {pickerService && (
+        <RepairPartPicker
+          open={!!pickerService}
+          onClose={() => setPickerService(null)}
+          config={pickerService.config}
+          initial={selectedParts[pickerService.service.id]}
+          onConfirm={(sel) => setSelectedParts(prev => ({ ...prev, [pickerService.service.id]: sel }))}
+        />
+      )}
     </div>
   );
 };
