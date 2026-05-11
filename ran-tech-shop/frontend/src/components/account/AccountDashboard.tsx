@@ -1,53 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../../store/authStore';
-import { useOrdersStore, type Order, type RepairBooking } from '../../store/ordersStore';
-
-// ============================================
-// SAMPLE DATA (shown when no real data exists)
-// ============================================
-const SAMPLE_ORDERS: Order[] = [
-  {
-    id: 'RAN-SAMPLE1',
-    date: '2026-01-15',
-    status: 'shipped',
-    items: [
-      {
-        id: 'sample-1',
-        name: 'Kingston Fury Impact 32GB DDR5 5600MHz',
-        quantity: 2,
-        price: 4990,
-        image: '/images/products/ram.jpg',
-      },
-    ],
-    total: 9980,
-    shippingAddress: 'No. 45, Galle Road, Colombo 03',
-    trackingNumber: 'LK8847562910',
-    customerName: 'Sample User',
-    customerEmail: 'sample@example.com',
-    customerPhone: '0771234567',
-  },
-];
-
-const SAMPLE_BOOKINGS: RepairBooking[] = [
-  {
-    ticketId: 'DEMO',
-    deviceType: 'Laptop',
-    deviceModel: 'Demo Device',
-    issueDescription: 'This is a sample booking - Book a repair to see your actual bookings here!',
-    currentStage: 1,
-    bookedDate: '2026-01-14',
-    estimatedCompletion: '2026-01-18',
-    technicianName: 'Kasun Silva',
-    totalCost: 5000,
-    services: ['Sample Service'],
-    timeSlot: '10:00 AM - 11:00 AM',
-    customerName: 'Sample User',
-    customerEmail: 'sample@example.com',
-    customerPhone: '0771234567',
-    createdAt: new Date().toISOString(),
-  },
-];
+import { useOrdersStore } from '../../store/ordersStore';
 
 const REPAIR_STAGES = ['Received', 'Diagnosing', 'Waiting for Parts', 'Repairing', 'Ready for Pickup'];
 
@@ -78,11 +32,8 @@ const AccountDashboard: React.FC = () => {
     booking.customerEmail?.toLowerCase() === user?.email?.toLowerCase()
   );
 
-  // Use real data if available, otherwise show sample data for demo
-  const orders = userOrders.length > 0 ? userOrders : SAMPLE_ORDERS;
-  const bookings = userBookings.length > 0 ? userBookings : SAMPLE_BOOKINGS;
-  const hasRealOrders = userOrders.length > 0;
-  const hasRealBookings = userBookings.length > 0;
+  const orders = userOrders;
+  const bookings = userBookings;
 
   const toggleOrderExpand = (orderId: string) => {
     setExpandedOrder(expandedOrder === orderId ? null : orderId);
@@ -155,13 +106,6 @@ const AccountDashboard: React.FC = () => {
             exit={{ opacity: 0, y: -10 }}
             className="space-y-4"
           >
-            {!hasRealOrders && (
-              <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 mb-4">
-                <p className="text-blue-400 text-sm text-center">
-                  📦 Sample order shown below. Complete a purchase to see your real orders!
-                </p>
-              </div>
-            )}
             {orders.length === 0 ? (
               <div className="text-center py-12">
                 <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -329,13 +273,6 @@ const AccountDashboard: React.FC = () => {
             exit={{ opacity: 0, y: -10 }}
             className="space-y-4"
           >
-            {!hasRealBookings && (
-              <div className="bg-primary/10 border border-primary/20 rounded-lg p-3 mb-4">
-                <p className="text-primary text-sm text-center">
-                  🔧 Sample booking shown below. Book a repair to see your actual bookings!
-                </p>
-              </div>
-            )}
             {bookings.length === 0 ? (
               <div className="text-center py-12">
                 <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">

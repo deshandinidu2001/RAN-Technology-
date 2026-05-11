@@ -22,14 +22,6 @@ interface RepairBooking {
   notes?: string;
 }
 
-const STAGE_TO_STATUS: Record<number, string> = {
-  0: 'pending',
-  1: 'confirmed',
-  2: 'in-progress',
-  3: 'in-progress',
-  4: 'completed',
-};
-
 const STATUS_COLORS: Record<string, string> = {
   pending: 'bg-yellow-500/15 border-yellow-500/30 text-yellow-300',
   confirmed: 'bg-blue-500/15 border-blue-500/30 text-blue-300',
@@ -43,7 +35,6 @@ const Profile: React.FC = () => {
   const favorites = useFavoritesStore((s) => s.items);
   const removeFavorite = useFavoritesStore((s) => s.remove);
   const localOrders = useOrdersStore((s) => s.orders);
-  const localBookings = useOrdersStore((s) => s.bookings);
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<ProfileTab>('account');
   const [editMode, setEditMode] = useState(false);
@@ -79,28 +70,8 @@ const Profile: React.FC = () => {
 
   const userEmail = user?.email?.toLowerCase() || '';
 
-  // Local bookings → unified shape
-  const localBookingsForUser: RepairBooking[] = localBookings
-    .filter((b) => !userEmail || b.customerEmail?.toLowerCase() === userEmail)
-    .map((b) => ({
-      id: b.ticketId,
-      date: b.bookedDate,
-      timeSlot: b.timeSlot,
-      deviceType: `${b.deviceType}${b.deviceModel && b.deviceModel !== 'Device' ? ` · ${b.deviceModel}` : ''}`,
-      issueDescription: b.issueDescription,
-      status: STAGE_TO_STATUS[b.currentStage] ?? 'pending',
-      createdAt: b.createdAt,
-      estimatedCost: b.totalCost,
-    }));
-
-  // De-duplicate API + local by id
-  const seenIds = new Set<string>();
-  const bookings: RepairBooking[] = [...localBookingsForUser, ...apiBookings].filter((b) => {
-    if (!b?.id) return false;
-    if (seenIds.has(b.id)) return false;
-    seenIds.add(b.id);
-    return true;
-  });
+  // Only use API bookings — no local store merge
+  const bookings: RepairBooking[] = apiBookings;
 
   // Orders from local store, filtered to current user
   const userOrders = localOrders.filter(

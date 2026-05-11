@@ -88,7 +88,7 @@ export const useOrdersStore = create<OrdersState>()(
   persist(
     (set, get) => ({
       orders: [],
-      bookings: [],
+      bookings: [] as RepairBooking[],
 
       // Add a new order
       addOrder: (orderData) => {
@@ -207,7 +207,8 @@ export const useOrdersStore = create<OrdersState>()(
       },
     }),
     {
-      name: 'ran-orders-storage',
+      name: 'ran-orders-v2',
+      partialize: (state) => ({ orders: state.orders }),
     }
   )
 );
