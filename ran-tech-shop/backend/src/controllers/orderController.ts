@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
-import { prisma } from '../server';
+import { supabase } from '../lib/supabase';
 
-interface OrderItem {
+interface OrderItemInput {
   productId: string;
   quantity: number;
   price: number;
@@ -18,91 +18,99 @@ export const createOrder = async (req: Request, res: Response): Promise<void> =>
       return;
     }
 
-    const { items, shippingName, shippingEmail, shippingAddress, shippingCity, shippingZip } = req.body;
+    const { items, shippingName, shippingEmail, shippingAddress, shippingCity, shippingZip } =
+      req.body;
 
-    // Validate items
     if (!items || !Array.isArray(items) || items.length === 0) {
       res.status(400).json({ error: 'Order must contain at least one item' });
       return;
     }
 
-    // Validate each item and calculate total
+    // Fetch all referenced products in one round-trip.
+    const productIds: string[] = items.map((i: any) => i.productId);
+    const { data: products, error: productsError } = await supabase
+      .from('Product')
+      .select('id, name, price, stock')
+      .in('id', productIds);
+
+    if (productsError) throw productsError;
+
+    const productMap = new Map((products ?? []).map((p) => [p.id, p]));
+
     let total = 0;
-    const validatedItems: OrderItem[] = [];
-
+    const validatedItems: OrderItemInput[] = [];
     for (const item of items) {
-      const product = await prisma.product.findUnique({
-        where: { id: item.productId },
-      });
-
+      const product = productMap.get(item.productId);
       if (!product) {
         res.status(400).json({ error: `Product not found: ${item.productId}` });
         return;
       }
-
       if (product.stock < item.quantity) {
         res.status(400).json({ error: `Insufficient stock for ${product.name}` });
         return;
       }
-
       validatedItems.push({
         productId: product.id,
         quantity: item.quantity,
         price: product.price,
       });
-
       total += product.price * item.quantity;
     }
 
-    // Create order with items in a transaction
-    const order = await prisma.$transaction(async (tx) => {
-      // Create the order
-      const newOrder = await tx.order.create({
-        data: {
-          userId: req.user!.userId,
-          total,
-          status: 'pending',
-          shippingName,
-          shippingEmail,
-          shippingAddress,
-          shippingCity,
-          shippingZip,
-          items: {
-            create: validatedItems.map((item) => ({
-              productId: item.productId,
-              quantity: item.quantity,
-              price: item.price,
-            })),
-          },
-        },
-        include: {
-          items: {
-            include: {
-              product: true,
-            },
-          },
-        },
+    // Insert order.
+    const { data: order, error: orderError } = await supabase
+      .from('Order')
+      .insert({
+        userId: req.user.userId,
+        total,
+        status: 'pending',
+        shippingName,
+        shippingEmail,
+        shippingAddress,
+        shippingCity,
+        shippingZip,
+      })
+      .select('*')
+      .single();
+
+    if (orderError || !order) throw orderError ?? new Error('Failed to create order');
+
+    // Insert order items.
+    const { error: itemsError } = await supabase.from('OrderItem').insert(
+      validatedItems.map((i) => ({
+        orderId: order.id,
+        productId: i.productId,
+        quantity: i.quantity,
+        price: i.price,
+      }))
+    );
+
+    if (itemsError) {
+      // Best-effort rollback: delete the order. OrderItem inserts that succeeded
+      // (if any) cascade-delete via FK.
+      await supabase.from('Order').delete().eq('id', order.id);
+      throw itemsError;
+    }
+
+    // Decrement stock atomically via RPC.
+    for (const i of validatedItems) {
+      const { error: stockError } = await supabase.rpc('decrement_product_stock', {
+        p_id: i.productId,
+        p_qty: i.quantity,
       });
-
-      // Update product stock
-      for (const item of validatedItems) {
-        await tx.product.update({
-          where: { id: item.productId },
-          data: {
-            stock: {
-              decrement: item.quantity,
-            },
-          },
-        });
+      if (stockError) {
+        console.error('Stock decrement failed:', stockError);
       }
+    }
 
-      return newOrder;
-    });
+    // Return full order with items + products.
+    const { data: fullOrder } = await supabase
+      .from('Order')
+      .select('*, items:OrderItem(*, product:Product(*))')
+      .eq('id', order.id)
+      .single();
 
-    res.status(201).json({
-      message: 'Order created successfully',
-      order,
-    });
+    res.status(201).json({ message: 'Order created successfully', order: fullOrder });
   } catch (error) {
     console.error('Create order error:', error);
     res.status(500).json({ error: 'Failed to create order' });
@@ -120,19 +128,14 @@ export const getUserOrders = async (req: Request, res: Response): Promise<void> 
       return;
     }
 
-    const orders = await prisma.order.findMany({
-      where: { userId: req.user.userId },
-      include: {
-        items: {
-          include: {
-            product: true,
-          },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+    const { data, error } = await supabase
+      .from('Order')
+      .select('*, items:OrderItem(*, product:Product(*))')
+      .eq('userId', req.user.userId)
+      .order('createdAt', { ascending: false });
 
-    res.json({ orders });
+    if (error) throw error;
+    res.json({ orders: data ?? [] });
   } catch (error) {
     console.error('Get user orders error:', error);
     res.status(500).json({ error: 'Failed to fetch orders' });
@@ -151,21 +154,14 @@ export const getOrderById = async (req: Request, res: Response): Promise<void> =
     }
 
     const { id } = req.params;
+    const { data: order, error } = await supabase
+      .from('Order')
+      .select('*, items:OrderItem(*, product:Product(*))')
+      .eq('id', id)
+      .eq('userId', req.user.userId)
+      .maybeSingle();
 
-    const order = await prisma.order.findFirst({
-      where: {
-        id,
-        userId: req.user.userId,
-      },
-      include: {
-        items: {
-          include: {
-            product: true,
-          },
-        },
-      },
-    });
-
+    if (error) throw error;
     if (!order) {
       res.status(404).json({ error: 'Order not found' });
       return;
@@ -188,39 +184,35 @@ export const updateOrderStatus = async (req: Request, res: Response): Promise<vo
     const { status } = req.body;
 
     const validStatuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
-    
     if (!status || !validStatuses.includes(status)) {
-      res.status(400).json({ 
-        error: 'Invalid status. Must be one of: ' + validStatuses.join(', ') 
-      });
+      res.status(400).json({ error: 'Invalid status. Must be one of: ' + validStatuses.join(', ') });
       return;
     }
 
-    const order = await prisma.order.findUnique({
-      where: { id },
-    });
+    const { data: existing } = await supabase
+      .from('Order')
+      .select('id')
+      .eq('id', id)
+      .maybeSingle();
 
-    if (!order) {
+    if (!existing) {
       res.status(404).json({ error: 'Order not found' });
       return;
     }
 
-    const updatedOrder = await prisma.order.update({
-      where: { id },
-      data: { status },
-      include: {
-        items: {
-          include: {
-            product: true,
-          },
-        },
-      },
-    });
+    const { error: updateError } = await supabase
+      .from('Order')
+      .update({ status })
+      .eq('id', id);
+    if (updateError) throw updateError;
 
-    res.json({
-      message: 'Order status updated successfully',
-      order: updatedOrder,
-    });
+    const { data: order } = await supabase
+      .from('Order')
+      .select('*, items:OrderItem(*, product:Product(*))')
+      .eq('id', id)
+      .single();
+
+    res.json({ message: 'Order status updated successfully', order });
   } catch (error) {
     console.error('Update order status error:', error);
     res.status(500).json({ error: 'Failed to update order status' });
@@ -240,16 +232,14 @@ export const cancelOrder = async (req: Request, res: Response): Promise<void> =>
 
     const { id } = req.params;
 
-    const order = await prisma.order.findFirst({
-      where: {
-        id,
-        userId: req.user.userId,
-      },
-      include: {
-        items: true,
-      },
-    });
+    const { data: order, error: fetchError } = await supabase
+      .from('Order')
+      .select('*, items:OrderItem(*)')
+      .eq('id', id)
+      .eq('userId', req.user.userId)
+      .maybeSingle();
 
+    if (fetchError) throw fetchError;
     if (!order) {
       res.status(404).json({ error: 'Order not found' });
       return;
@@ -260,40 +250,27 @@ export const cancelOrder = async (req: Request, res: Response): Promise<void> =>
       return;
     }
 
-    // Cancel order and restore stock in a transaction
-    const cancelledOrder = await prisma.$transaction(async (tx) => {
-      // Update order status
-      const updated = await tx.order.update({
-        where: { id },
-        data: { status: 'cancelled' },
-        include: {
-          items: {
-            include: {
-              product: true,
-            },
-          },
-        },
+    const { error: updateError } = await supabase
+      .from('Order')
+      .update({ status: 'cancelled' })
+      .eq('id', id);
+    if (updateError) throw updateError;
+
+    // Restore stock for each item via RPC.
+    for (const item of (order as any).items ?? []) {
+      await supabase.rpc('increment_product_stock', {
+        p_id: item.productId,
+        p_qty: item.quantity,
       });
+    }
 
-      // Restore product stock
-      for (const item of order.items) {
-        await tx.product.update({
-          where: { id: item.productId },
-          data: {
-            stock: {
-              increment: item.quantity,
-            },
-          },
-        });
-      }
+    const { data: cancelledOrder } = await supabase
+      .from('Order')
+      .select('*, items:OrderItem(*, product:Product(*))')
+      .eq('id', id)
+      .single();
 
-      return updated;
-    });
-
-    res.json({
-      message: 'Order cancelled successfully',
-      order: cancelledOrder,
-    });
+    res.json({ message: 'Order cancelled successfully', order: cancelledOrder });
   } catch (error) {
     console.error('Cancel order error:', error);
     res.status(500).json({ error: 'Failed to cancel order' });
@@ -307,42 +284,27 @@ export const cancelOrder = async (req: Request, res: Response): Promise<void> =>
 export const getAllOrders = async (req: Request, res: Response): Promise<void> => {
   try {
     const { status, page = '1', limit = '20' } = req.query;
-
-    const where: any = {};
-    if (status) {
-      where.status = status as string;
-    }
-
     const pageNum = parseInt(page as string, 10);
     const limitNum = parseInt(limit as string, 10);
-    const skip = (pageNum - 1) * limitNum;
+    const from = (pageNum - 1) * limitNum;
+    const to = from + limitNum - 1;
 
-    const [orders, total] = await Promise.all([
-      prisma.order.findMany({
-        where,
-        include: {
-          user: {
-            select: {
-              id: true,
-              email: true,
-              name: true,
-            },
-          },
-          items: {
-            include: {
-              product: true,
-            },
-          },
-        },
-        orderBy: { createdAt: 'desc' },
-        skip,
-        take: limitNum,
-      }),
-      prisma.order.count({ where }),
-    ]);
+    let query = supabase
+      .from('Order')
+      .select('*, user:User(id, email, name), items:OrderItem(*, product:Product(*))', {
+        count: 'exact',
+      })
+      .order('createdAt', { ascending: false })
+      .range(from, to);
 
+    if (status) query = query.eq('status', status as string);
+
+    const { data, error, count } = await query;
+    if (error) throw error;
+
+    const total = count ?? 0;
     res.json({
-      orders,
+      orders: data ?? [],
       pagination: {
         page: pageNum,
         limit: limitNum,
@@ -353,5 +315,18 @@ export const getAllOrders = async (req: Request, res: Response): Promise<void> =
   } catch (error) {
     console.error('Get all orders error:', error);
     res.status(500).json({ error: 'Failed to fetch orders' });
+  }
+};
+
+// Hard-delete an order (admin). OrderItem rows cascade via FK.
+export const deleteOrder = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { error } = await supabase.from('Order').delete().eq('id', id);
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Delete order error:', error);
+    res.status(500).json({ error: 'Failed to delete order' });
   }
 };

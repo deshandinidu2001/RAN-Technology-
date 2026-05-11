@@ -6,50 +6,7 @@ import { useOrdersStore, RepairBooking, Order } from '../store/ordersStore';
 import { Product } from '../types';
 import api from '../utils/api';
 
-const SAMPLE_ORDERS: Order[] = [
-  {
-    id: 'RAN-SAMPLE1',
-    date: '2026-01-15',
-    status: 'processing',
-    items: [
-      {
-        id: 'sample-1',
-        name: 'Kingston Fury Impact 32GB DDR5 5600MHz',
-        quantity: 2,
-        price: 4990,
-        image: '/images/products/ram.jpg',
-      },
-    ],
-    total: 9980,
-    shippingAddress: 'No. 45, Galle Road, Colombo 03',
-    trackingNumber: 'LK8847562910',
-    customerName: 'Sample User',
-    customerEmail: 'sample@example.com',
-    customerPhone: '0771234567',
-  },
-];
-
-const SAMPLE_BOOKINGS: RepairBooking[] = [
-  {
-    ticketId: 'DEMO-001',
-    deviceType: 'Laptop',
-    deviceModel: 'Demo Device',
-    issueDescription: 'This is a sample booking shown when no live repair data exists yet.',
-    currentStage: 1,
-    bookedDate: '2026-01-14',
-    estimatedCompletion: '2026-01-18',
-    technicianName: 'Kasun Silva',
-    totalCost: 5000,
-    services: ['Sample Service'],
-    timeSlot: '10:00 AM - 11:00 AM',
-    customerName: 'Sample User',
-    customerEmail: 'sample@example.com',
-    customerPhone: '0771234567',
-    createdAt: new Date().toISOString(),
-  },
-];
-
-type TabType = 'repairs' | 'orders' | 'products' | 'services' | 'users' | 'timeslots' | 'settings';
+type TabType = 'repairs' | 'orders' | 'products' | 'services' | 'categories' | 'users' | 'timeslots' | 'settings';
 
 const repairStages = ['Received', 'Diagnosing', 'Waiting for Parts', 'Repairing', 'Ready for Pickup'];
 const technicians = ['Kasun Silva', 'Nimesh Jayawardena', 'Pradeep Fernando', 'Ruwan Perera'];
@@ -102,6 +59,65 @@ type BackendOrder = {
       image?: string;
     } | null;
   }>;
+};
+
+type AdminFilterCategory = {
+  id?: string;
+  slug: string;
+  name: string;
+  parentSlug?: string | null;
+  order: number;
+  visible: boolean;
+};
+
+const DEFAULT_FILTER_CATEGORIES: AdminFilterCategory[] = [
+  { slug: 'laptops', name: 'Laptops', order: 10, visible: true },
+  { slug: 'ram', name: 'RAM Memory', order: 20, visible: true },
+  { slug: 'ssd', name: 'SSD Storage', order: 30, visible: true },
+  { slug: 'battery', name: 'Laptop Batteries', order: 40, visible: true },
+  { slug: 'cooling-pad', name: 'Cooling', order: 50, visible: true },
+  { slug: 'processor', name: 'Processors', order: 60, visible: true },
+  { slug: 'motherboard', name: 'Motherboards', order: 70, visible: true },
+  { slug: 'psu', name: 'Power Supplies', order: 80, visible: true },
+  { slug: 'case', name: 'PC Cases', order: 90, visible: true },
+  { slug: 'graphics-cards', name: 'Graphics Cards', order: 100, visible: true },
+  { slug: 'monitors', name: 'Monitors', order: 110, visible: true },
+  { slug: 'storage', name: 'Storage', order: 120, visible: true },
+  { slug: 'gaming', name: 'Gaming', order: 130, visible: true },
+  { slug: 'smartphones', name: 'Smartphones', order: 140, visible: true },
+  { slug: 'accessories', name: 'Accessories', order: 150, visible: true },
+  { slug: 'gaming-laptop', name: 'Gaming Laptops', parentSlug: 'laptops', order: 10, visible: true },
+  { slug: 'business-laptop', name: 'Business Laptops', parentSlug: 'laptops', order: 20, visible: true },
+  { slug: 'used-laptop', name: 'Used Laptops', parentSlug: 'laptops', order: 30, visible: true },
+];
+
+const FILTER_DETAIL_FIELDS: Record<string, string[]> = {
+  laptops: ['Processor', 'RAM', 'Storage'],
+  ram: ['Type', 'Capacity', 'Speed'],
+  ssd: ['Type', 'Capacity'],
+  battery: ['Compatibility', 'Capacity', 'Warranty'],
+  'cooling-pad': ['Type', 'Compatibility'],
+  processor: ['Socket', 'Cores'],
+  motherboard: ['Socket', 'Chipset'],
+  psu: ['Wattage', 'Efficiency'],
+  case: ['Form Factor', 'Size'],
+  'graphics-cards': ['Chipset', 'Memory'],
+  monitors: ['Resolution', 'Refresh Rate', 'Panel Type'],
+  storage: ['Type', 'Capacity'],
+  smartphones: ['RAM', 'Storage'],
+  gaming: ['Platform', 'Type'],
+  accessories: ['Type', 'Compatibility'],
+};
+
+const PRODUCT_CATEGORY_PARENT: Record<string, string> = {
+  ram: 'laptop-accessories',
+  ssd: 'laptop-accessories',
+  battery: 'laptop-accessories',
+  'cooling-pad': 'laptop-accessories',
+  processor: 'components',
+  motherboard: 'components',
+  psu: 'components',
+  case: 'components',
 };
 
 const bookingStatusToStage = (status?: string) => {
@@ -166,15 +182,15 @@ const mapBackendOrder = (order: BackendOrder): Order => ({
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
   const { isAdminAuthenticated, adminLogout, blockTimeSlot, unblockTimeSlot, getBlockedSlotsForDate } = useAdminStore();
-  const { 
-    bookings, orders, 
+  const {
     updateBookingStage, updateBookingTechnician, updateBookingEstCompletion, updateBookingCost,
-    deleteBooking, updateOrderStatus, deleteOrder 
+    updateOrderStatus
   } = useOrdersStore();
   const [dbProducts, setDbProducts] = useState<Product[]>([]);
   const [productsLoading, setProductsLoading] = useState(false);
   const [liveBookings, setLiveBookings] = useState<RepairBooking[]>([]);
   const [liveOrders, setLiveOrders] = useState<Order[]>([]);
+  const [filterCategories, setFilterCategories] = useState<AdminFilterCategory[]>(DEFAULT_FILTER_CATEGORIES);
 
   // Fetch products from database API
   const fetchProducts = useCallback(async () => {
@@ -197,6 +213,23 @@ const AdminDashboard: React.FC = () => {
       setDbUsers(response.data);
     } catch (error) {
       console.error('Failed to fetch users:', error);
+    }
+  }, []);
+
+  const fetchFilterCategories = useCallback(async () => {
+    try {
+      const response = await api.get('/filter-categories?includeHidden=true');
+      const loaded = response.data?.categories || [];
+      if (Array.isArray(loaded) && loaded.length > 0) {
+        const bySlug = new Map<string, AdminFilterCategory>();
+        [...DEFAULT_FILTER_CATEGORIES, ...loaded].forEach((cat) => bySlug.set(cat.slug, cat));
+        setFilterCategories(Array.from(bySlug.values()));
+      } else {
+        setFilterCategories(DEFAULT_FILTER_CATEGORIES);
+      }
+    } catch (error) {
+      console.error('Failed to fetch filter categories:', error);
+      setFilterCategories(DEFAULT_FILTER_CATEGORIES);
     }
   }, []);
 
@@ -228,8 +261,9 @@ const AdminDashboard: React.FC = () => {
       fetchUsers();
       fetchBookings();
       fetchOrders();
+      fetchFilterCategories();
     }
-  }, [isAdminAuthenticated, fetchProducts, fetchUsers, fetchBookings, fetchOrders]);
+  }, [isAdminAuthenticated, fetchProducts, fetchUsers, fetchBookings, fetchOrders, fetchFilterCategories]);
 
   const handleDeleteProduct = async (product: Product) => {
     if (!confirm(`Delete ${product.name}?`)) return;
@@ -274,6 +308,7 @@ const AdminDashboard: React.FC = () => {
       setShowProductForm(false);
       setSelectedProduct(null);
       setServiceFormMode(false);
+      setProductFormCategory('');
     } catch (error: any) {
       console.error('Failed to save product:', error);
       alert(error.response?.data?.error || 'Failed to save product');
@@ -286,8 +321,62 @@ const AdminDashboard: React.FC = () => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [showProductForm, setShowProductForm] = useState(false);
   const [serviceFormMode, setServiceFormMode] = useState(false);
+  const [productFormCategory, setProductFormCategory] = useState('');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Cloudinary-backed image uploads for the product form.
+  const [mainImageUrl, setMainImageUrl] = useState('');
+  const [galleryUrls, setGalleryUrls] = useState<string[]>([]);
+  const [uploadingMain, setUploadingMain] = useState(false);
+  const [uploadingGallery, setUploadingGallery] = useState(false);
+
+  // Whenever the form opens (new or edit), seed the upload state from the row.
+  useEffect(() => {
+    if (!showProductForm) return;
+    setMainImageUrl(selectedProduct?.image || '');
+    const raw = (selectedProduct as any)?.images;
+    let gallery: string[] = [];
+    if (Array.isArray(raw)) {
+      gallery = raw.filter(Boolean);
+    } else if (typeof raw === 'string' && raw) {
+      try { const parsed = JSON.parse(raw); if (Array.isArray(parsed)) gallery = parsed.filter(Boolean); }
+      catch { gallery = raw.split(',').map(s => s.trim()).filter(Boolean); }
+    }
+    setGalleryUrls(gallery);
+  }, [showProductForm, selectedProduct]);
+
+  const uploadMainImage = async (file: File) => {
+    setUploadingMain(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('folder', 'ran-tech-shop/products');
+      const res = await api.post('/uploads/image', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      setMainImageUrl(res.data.url);
+    } catch (err: any) {
+      alert(err?.response?.data?.error || 'Failed to upload image');
+    } finally {
+      setUploadingMain(false);
+    }
+  };
+
+  const uploadGalleryImages = async (files: FileList) => {
+    if (!files || files.length === 0) return;
+    setUploadingGallery(true);
+    try {
+      const fd = new FormData();
+      Array.from(files).forEach(f => fd.append('files', f));
+      fd.append('folder', 'ran-tech-shop/products');
+      const res = await api.post('/uploads/images', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      const newUrls = (res.data.images || []).map((i: any) => i.url);
+      setGalleryUrls(prev => [...prev, ...newUrls]);
+    } catch (err: any) {
+      alert(err?.response?.data?.error || 'Failed to upload images');
+    } finally {
+      setUploadingGallery(false);
+    }
+  };
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -348,8 +437,9 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
-  const bookingSource = liveBookings.length > 0 ? liveBookings : bookings;
-  const orderSource = liveOrders.length > 0 ? liveOrders : orders;
+  // Admin only renders data from the backend (Supabase). No local-store fallback.
+  const bookingSource = liveBookings;
+  const orderSource = liveOrders;
 
   // Filter repairs based on search
   const filteredBookings = bookingSource.filter(b => 
@@ -366,10 +456,8 @@ const AdminDashboard: React.FC = () => {
     o.customerPhone.includes(searchTerm)
   );
 
-  const hasRepairSourceData = bookingSource.length > 0;
-  const hasOrderSourceData = orderSource.length > 0;
-  const displayOrders = hasOrderSourceData ? filteredOrders : SAMPLE_ORDERS;
-  const displayBookings = hasRepairSourceData ? filteredBookings : SAMPLE_BOOKINGS;
+  const displayOrders = filteredOrders;
+  const displayBookings = filteredBookings;
 
   const blockedSlots = getBlockedSlotsForDate(selectedDate);
 
@@ -392,14 +480,33 @@ const AdminDashboard: React.FC = () => {
 
   // Stats
   const stats = {
-    totalRepairs: hasRepairSourceData ? bookingSource.length : displayBookings.length,
-    pendingRepairs: (hasRepairSourceData ? bookingSource : displayBookings).filter(b => b.currentStage < 4).length,
-    completedRepairs: (hasRepairSourceData ? bookingSource : displayBookings).filter(b => b.currentStage === 4).length,
-    totalOrders: hasOrderSourceData ? orderSource.length : displayOrders.length,
-    processingOrders: (hasOrderSourceData ? orderSource : displayOrders).filter(o => o.status === 'processing').length,
+    totalRepairs: bookingSource.length,
+    pendingRepairs: bookingSource.filter(b => b.currentStage < 4).length,
+    completedRepairs: bookingSource.filter(b => b.currentStage === 4).length,
+    totalOrders: orderSource.length,
+    processingOrders: orderSource.filter(o => o.status === 'processing').length,
     totalProducts: dbProducts.length,
     lowStockProducts: dbProducts.filter(p => p.stock < 10).length,
   };
+
+  const visibleFilterCategories = filterCategories
+    .filter((cat) => cat.visible !== false && cat.slug !== 'laptop-accessories' && cat.slug !== 'components')
+    .sort((a, b) => (a.order || 0) - (b.order || 0) || a.name.localeCompare(b.name));
+  const mainCategoryOptions = visibleFilterCategories.filter((cat) => !cat.parentSlug);
+  const subcategoryOptions = productFormCategory
+    ? visibleFilterCategories.filter((cat) => cat.parentSlug === productFormCategory)
+    : [];
+  const quickSpecFields = FILTER_DETAIL_FIELDS[productFormCategory] || ['Type', 'Compatibility'];
+
+  const readSpecs = (product?: Product | null): Record<string, string> => {
+    if (!product?.specs) return {};
+    if (typeof product.specs === 'string') {
+      try { return JSON.parse(product.specs); } catch { return {}; }
+    }
+    return product.specs as Record<string, string>;
+  };
+  const categoryForForm = (product: Product) =>
+    PRODUCT_CATEGORY_PARENT[product.subcategory || ''] ? (product.subcategory as string) : product.category || '';
 
   if (!isAdminAuthenticated) {
     return null;
@@ -474,6 +581,7 @@ const AdminDashboard: React.FC = () => {
             { id: 'orders', label: 'Orders', icon: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg> },
             { id: 'products', label: 'Products', icon: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg> },
             { id: 'services', label: 'Services', icon: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg> },
+            { id: 'categories', label: 'Filter Categories', icon: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" /></svg> },
             { id: 'users', label: 'Users', icon: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg> },
             { id: 'timeslots', label: 'Time Slots', icon: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> },
             { id: 'settings', label: 'Settings', icon: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg> },
@@ -547,10 +655,14 @@ const AdminDashboard: React.FC = () => {
                         Edit
                       </button>
                       <button
-                        onClick={() => {
-                          if (confirm('Delete this repair?')) {
-                            deleteBooking(repair.ticketId);
-                            setLiveBookings(prev => prev.filter(booking => booking.ticketId !== repair.ticketId));
+                        onClick={async () => {
+                          if (!confirm('Delete this repair?')) return;
+                          try {
+                            await api.delete(`/repairs/admin/booking/${repair.ticketId}`);
+                            setLiveBookings(prev => prev.filter(b => b.ticketId !== repair.ticketId));
+                          } catch (err) {
+                            console.error('Failed to delete repair', err);
+                            alert('Failed to delete repair.');
                           }
                         }}
                         className="px-3 py-2 bg-red-500/10 text-red-400 rounded-lg hover:bg-red-500/20 transition-colors text-sm"
@@ -623,10 +735,14 @@ const AdminDashboard: React.FC = () => {
                         View
                       </button>
                       <button
-                        onClick={() => {
-                          if (confirm('Delete this order?')) {
-                            deleteOrder(order.id);
-                            setLiveOrders(prev => prev.filter(item => item.id !== order.id));
+                        onClick={async () => {
+                          if (!confirm('Delete this order?')) return;
+                          try {
+                            await api.delete(`/orders/${order.id}`);
+                            setLiveOrders(prev => prev.filter(o => o.id !== order.id));
+                          } catch (err) {
+                            console.error('Failed to delete order', err);
+                            alert('Failed to delete order.');
                           }
                         }}
                         className="px-3 py-2 bg-red-500/10 text-red-400 rounded-lg hover:bg-red-500/20 transition-colors text-sm"
@@ -681,6 +797,8 @@ const AdminDashboard: React.FC = () => {
               <button
                 onClick={() => {
                   setSelectedProduct(null);
+                  setServiceFormMode(false);
+                  setProductFormCategory('');
                   setShowProductForm(true);
                 }}
                 className="px-6 py-3 bg-primary text-dark rounded-xl font-semibold hover:bg-primary/90 transition-colors flex items-center gap-2"
@@ -768,10 +886,12 @@ const AdminDashboard: React.FC = () => {
                             </svg>
                           </button>
                           <button
-                            onClick={() => {
-                              setSelectedProduct(product);
-                              setShowProductForm(true);
-                            }}
+                              onClick={() => {
+                                setSelectedProduct(product);
+                                setServiceFormMode(false);
+                                setProductFormCategory(categoryForForm(product));
+                                setShowProductForm(true);
+                              }}
                             className="p-2 bg-blue-500/20 text-blue-400 rounded-lg hover:bg-blue-500/30 transition-colors"
                           >
                             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -820,6 +940,7 @@ const AdminDashboard: React.FC = () => {
                 onClick={() => {
                   setSelectedProduct(null);
                   setServiceFormMode(true);
+                  setProductFormCategory('services');
                   setShowProductForm(true);
                 }}
                 className="px-6 py-3 bg-primary text-dark rounded-xl font-semibold hover:bg-primary/90 transition-colors flex items-center gap-2"
@@ -893,6 +1014,7 @@ const AdminDashboard: React.FC = () => {
                               onClick={() => {
                                 setSelectedProduct(service);
                                 setServiceFormMode(true);
+                                setProductFormCategory('services');
                                 setShowProductForm(true);
                               }}
                               title="Edit service"
@@ -920,6 +1042,11 @@ const AdminDashboard: React.FC = () => {
               </div>
             )}
           </div>
+        )}
+
+        {/* Filter Categories Tab */}
+        {activeTab === 'categories' && (
+          <FilterCategoriesAdmin />
         )}
 
         {/* Users Tab */}
@@ -1015,10 +1142,10 @@ const AdminDashboard: React.FC = () => {
               <h3 className="text-white font-semibold mb-4">Data Management</h3>
               <div className="space-y-3">
                 <button
-                  onClick={() => {
-                    if (confirm('Clear all repairs? This cannot be undone.')) {
-                      useOrdersStore.getState().bookings.forEach(b => deleteBooking(b.ticketId));
-                    }
+                  onClick={async () => {
+                    if (!confirm('Clear all repairs? This cannot be undone.')) return;
+                    await Promise.all(liveBookings.map(b => api.delete(`/repairs/admin/booking/${b.ticketId}`).catch(() => {})));
+                    fetchBookings();
                   }}
                   className="w-full sm:w-auto px-4 py-3 bg-red-500/10 text-red-400 border border-red-500/30 rounded-xl hover:bg-red-500/20 transition-colors flex items-center gap-2"
                 >
@@ -1028,10 +1155,10 @@ const AdminDashboard: React.FC = () => {
                   Clear All Repairs
                 </button>
                 <button
-                  onClick={() => {
-                    if (confirm('Clear all orders? This cannot be undone.')) {
-                      useOrdersStore.getState().orders.forEach(o => deleteOrder(o.id));
-                    }
+                  onClick={async () => {
+                    if (!confirm('Clear all orders? This cannot be undone.')) return;
+                    await Promise.all(liveOrders.map(o => api.delete(`/orders/${o.id}`).catch(() => {})));
+                    fetchOrders();
                   }}
                   className="w-full sm:w-auto px-4 py-3 bg-red-500/10 text-red-400 border border-red-500/30 rounded-xl hover:bg-red-500/20 transition-colors flex items-center gap-2"
                 >
@@ -1277,7 +1404,7 @@ const AdminDashboard: React.FC = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-            onClick={() => { setShowProductForm(false); setServiceFormMode(false); }}
+            onClick={() => { setShowProductForm(false); setServiceFormMode(false); setProductFormCategory(''); }}
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
@@ -1303,6 +1430,15 @@ const AdminDashboard: React.FC = () => {
                     if (specsVal) parsedSpecs = JSON.parse(specsVal);
                   } catch (err) {}
 
+                  const quickSpecs: Record<string, string> = {};
+                  formData.forEach((value, key) => {
+                    if (!key.startsWith('spec:')) return;
+                    const specKey = key.slice(5);
+                    const specValue = String(value).trim();
+                    if (specKey && specValue) quickSpecs[specKey] = specValue;
+                  });
+                  parsedSpecs = { ...(parsedSpecs || {}), ...quickSpecs };
+
                   let parsedFeatures = selectedProduct?.features || [];
                   try {
                     const featuresVal = formData.get('features') as string;
@@ -1317,23 +1453,43 @@ const AdminDashboard: React.FC = () => {
 
                   const isServiceForm = serviceFormMode || (selectedProduct as any)?.isService;
                   const serviceType = formData.get('serviceType') as string || undefined;
+                  const compatibleIdsRaw = formData.get('compatibleProductIds') as string;
+                  const compatibleIds = compatibleIdsRaw ? compatibleIdsRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
+                  const selectedCategorySlug = formData.get('category') as string;
+                  const parentCategory = PRODUCT_CATEGORY_PARENT[selectedCategorySlug];
+
                   const productData: any = {
                     name: formData.get('name') as string,
                     description: formData.get('description') as string,
                     price: Number(formData.get('price')),
                     image: formData.get('image') as string,
-                    images: (formData.get('images') as string)?.split(',').map(s=>s.trim()).filter(Boolean) || [formData.get('image') as string],
-                    category: isServiceForm ? 'services' : (formData.get('category') as string),
-                    subcategory: isServiceForm ? serviceType : (formData.get('subcategory') as string || undefined),
+                    category: isServiceForm ? 'services' : (parentCategory || selectedCategorySlug),
                     isService: !!isServiceForm,
                     serviceType: isServiceForm ? serviceType : undefined,
-                    stock: Number(formData.get('stock')),
                     featured: formData.get('featured') === 'on',
-                    brand: formData.get('brand') as string || undefined,
-                    sku: formData.get('sku') as string || undefined,
-                    specs: parsedSpecs,
-                    features: parsedFeatures,
                   };
+
+                  if (isServiceForm) {
+                    productData.subcategory = serviceType;
+                    // Stock kept as a sane default for services so booking flows work.
+                    productData.stock = 999;
+                    // For services we use the `compatibility` field to store JSON of compatible product IDs
+                    // shown in the part picker on the repair page.
+                    productData.compatibility = JSON.stringify(compatibleIds);
+                  } else {
+                    productData.subcategory = parentCategory
+                      ? selectedCategorySlug
+                      : (formData.get('subcategory') as string || undefined);
+                    productData.stock = Number(formData.get('stock'));
+                    productData.brand = formData.get('brand') as string || undefined;
+                    productData.sku = formData.get('sku') as string || undefined;
+                    productData.condition = (formData.get('condition') as string) || undefined;
+                    productData.images = (formData.get('images') as string)?.split(',').map(s=>s.trim()).filter(Boolean) || [formData.get('image') as string];
+                    productData.specs = parsedSpecs;
+                    productData.features = parsedFeatures;
+                    // For accessories like batteries: admin-picked compatible laptop product IDs.
+                    productData.compatibility = JSON.stringify(compatibleIds);
+                  }
 
                   handleSaveProduct(productData, !!selectedProduct, selectedProduct?.id?.toString());
                 }}
@@ -1378,140 +1534,253 @@ const AdminDashboard: React.FC = () => {
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-white/70 text-sm mb-2">Stock *</label>
-                    <input
-                      type="number"
-                      name="stock"
-                      defaultValue={selectedProduct?.stock}
-                      required
-                      min="0"
-                      className="w-full px-4 py-3 bg-dark-200/50 border border-white/10 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:border-primary/50"
-                      placeholder="0"
-                    />
-                  </div>
+                  {!(serviceFormMode || (selectedProduct as any)?.isService) && (
+                    <div>
+                      <label className="block text-white/70 text-sm mb-2">Stock *</label>
+                      <input
+                        type="number"
+                        name="stock"
+                        defaultValue={selectedProduct?.stock}
+                        required
+                        min="0"
+                        className="w-full px-4 py-3 bg-dark-200/50 border border-white/10 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:border-primary/50"
+                        placeholder="0"
+                      />
+                    </div>
+                  )}
 
                   {(serviceFormMode || (selectedProduct as any)?.isService) ? (
-                    <div className="md:col-span-2">
-                      <label className="block text-white/70 text-sm mb-2">Service Type *</label>
-                      <select
-                        name="serviceType"
-                        defaultValue={(selectedProduct as any)?.serviceType || ''}
-                        required
-                        className="w-full px-4 py-3 bg-dark-200/50 border border-white/10 rounded-xl text-white focus:outline-none focus:border-primary/50"
-                      >
-                        <option value="">Select Service Type</option>
-                        <option value="repair">Hardware / Repair</option>
-                        <option value="software">Software</option>
-                        <option value="data">Data Recovery</option>
-                        <option value="upgrade">Upgrade</option>
-                        <option value="maintenance">Maintenance</option>
-                        <option value="cleaning">Cleaning</option>
-                      </select>
-                      <p className="text-xs text-white/40 mt-1">Used by the booking page to group services.</p>
-                    </div>
+                    <>
+                      <div className="md:col-span-2">
+                        <label className="block text-white/70 text-sm mb-2">Service Type *</label>
+                        <select
+                          name="serviceType"
+                          defaultValue={(selectedProduct as any)?.serviceType || ''}
+                          required
+                          className="w-full px-4 py-3 bg-dark-200/50 border border-white/10 rounded-xl text-white focus:outline-none focus:border-primary/50"
+                        >
+                          <option value="">Select Service Type</option>
+                          <option value="repair">Hardware / Repair</option>
+                          <option value="software">Software</option>
+                          <option value="data">Data Recovery</option>
+                          <option value="upgrade">Upgrade</option>
+                          <option value="maintenance">Maintenance</option>
+                          <option value="cleaning">Cleaning</option>
+                        </select>
+                        <p className="text-xs text-white/40 mt-1">Used by the booking page to group services.</p>
+                      </div>
+
+                      <div className="md:col-span-2">
+                        <label className="block text-white/70 text-sm mb-2">Compatible Products</label>
+                        <p className="text-xs text-white/40 mb-2">
+                          Customers see these products in the part picker for this service. Leave empty to auto-detect by service name.
+                        </p>
+                        <CompatibleProductsPicker
+                          allProducts={dbProducts.filter(p => !(p as any).isService)}
+                          initialIds={(() => {
+                            const c = (selectedProduct as any)?.compatibility;
+                            if (!c) return [] as string[];
+                            try { const arr = typeof c === 'string' ? JSON.parse(c) : c; return Array.isArray(arr) ? arr.map(String) : []; }
+                            catch { return []; }
+                          })()}
+                        />
+                      </div>
+                    </>
                   ) : (
                     <>
                       <div>
                         <label className="block text-white/70 text-sm mb-2">Category *</label>
                         <select
                           name="category"
-                          defaultValue={selectedProduct?.category}
+                          value={productFormCategory || selectedProduct?.category || ''}
+                          onChange={(e) => setProductFormCategory(e.target.value)}
                           required
                           className="w-full px-4 py-3 bg-dark-200/50 border border-white/10 rounded-xl text-white focus:outline-none focus:border-primary/50"
                         >
                           <option value="">Select Category</option>
-                          <option value="laptops">Laptops</option>
-                          <option value="smartphones">Smartphones</option>
-                          <option value="laptop-accessories">Laptop Accessories</option>
-                          <option value="components">Components (PC Build)</option>
-                          <option value="graphics-cards">Graphics Cards</option>
-                          <option value="accessories">Accessories</option>
-                          <option value="monitors">Monitors</option>
-                          <option value="storage">Storage</option>
-                          <option value="gaming">Gaming</option>
+                          {mainCategoryOptions.map((cat) => (
+                            <option key={cat.slug} value={cat.slug}>{cat.name}</option>
+                          ))}
                         </select>
                       </div>
 
                       <div>
                         <label className="block text-white/70 text-sm mb-2">Subcategory</label>
-                        <input
-                          type="text"
+                        <select
                           name="subcategory"
                           defaultValue={selectedProduct?.subcategory}
                           className="w-full px-4 py-3 bg-dark-200/50 border border-white/10 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:border-primary/50"
-                          placeholder="e.g., processor, motherboard, ram"
-                        />
+                        >
+                          <option value="">No subcategory</option>
+                          {subcategoryOptions.map((cat) => (
+                            <option key={cat.slug} value={cat.slug}>{cat.name}</option>
+                          ))}
+                        </select>
+                        <p className="text-xs text-white/40 mt-1">Add more options in the Categories tab.</p>
                       </div>
                     </>
                   )}
 
-                  <div>
-                    <label className="block text-white/70 text-sm mb-2">Brand</label>
-                    <input
-                      type="text"
-                      name="brand"
-                      defaultValue={selectedProduct?.brand}
-                      className="w-full px-4 py-3 bg-dark-200/50 border border-white/10 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:border-primary/50"
-                      placeholder="e.g., Apple, Samsung"
-                    />
+                  {!(serviceFormMode || (selectedProduct as any)?.isService) && (
+                    <>
+                      <div>
+                        <label className="block text-white/70 text-sm mb-2">Brand</label>
+                        <input
+                          type="text"
+                          name="brand"
+                          defaultValue={selectedProduct?.brand}
+                          className="w-full px-4 py-3 bg-dark-200/50 border border-white/10 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:border-primary/50"
+                          placeholder="e.g., Apple, Samsung"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-white/70 text-sm mb-2">SKU</label>
+                        <input
+                          type="text"
+                          name="sku"
+                          defaultValue={selectedProduct?.sku}
+                          className="w-full px-4 py-3 bg-dark-200/50 border border-white/10 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:border-primary/50"
+                          placeholder="e.g., IPH-15-PM-256"
+                        />
+                      </div>
+
+                      <div className="md:col-span-2">
+                        <label className="block text-white/70 text-sm mb-2">Condition *</label>
+                        <select
+                          name="condition"
+                          defaultValue={(selectedProduct as any)?.condition || 'new'}
+                          required
+                          className="w-full px-4 py-3 bg-dark-200/50 border border-white/10 rounded-xl text-white focus:outline-none focus:border-primary/50"
+                        >
+                          <option value="new">Brand New</option>
+                          <option value="used">Used</option>
+                          <option value="refurbished">Refurbished</option>
+                        </select>
+                      </div>
+                    </>
+                  )}
+
+                  <div className={(serviceFormMode || (selectedProduct as any)?.isService) ? 'md:col-span-2' : 'md:col-span-1'}>
+                    <label className="block text-white/70 text-sm mb-2">Main Image *</label>
+                    <input type="hidden" name="image" value={mainImageUrl} />
+                    <div className="flex items-center gap-3">
+                      {mainImageUrl ? (
+                        <div className="relative">
+                          <img src={mainImageUrl} alt="main" className="w-20 h-20 object-cover rounded-lg border border-white/10" />
+                          <button
+                            type="button"
+                            onClick={() => setMainImageUrl('')}
+                            className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 text-white text-xs flex items-center justify-center"
+                            aria-label="Remove main image"
+                          >×</button>
+                        </div>
+                      ) : (
+                        <div className="w-20 h-20 rounded-lg border border-dashed border-white/20 flex items-center justify-center text-white/30 text-xs">No image</div>
+                      )}
+                      <label className="px-4 py-2 bg-primary/20 hover:bg-primary/30 border border-primary/40 text-primary rounded-lg cursor-pointer text-sm">
+                        {uploadingMain ? 'Uploading…' : (mainImageUrl ? 'Replace' : 'Upload Image')}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          disabled={uploadingMain}
+                          onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadMainImage(f); e.currentTarget.value = ''; }}
+                        />
+                      </label>
+                    </div>
+                    {!mainImageUrl && <p className="text-xs text-red-400/80 mt-1">Required — upload an image to continue.</p>}
                   </div>
 
-                  <div>
-                    <label className="block text-white/70 text-sm mb-2">SKU</label>
-                    <input
-                      type="text"
-                      name="sku"
-                      defaultValue={selectedProduct?.sku}
-                      className="w-full px-4 py-3 bg-dark-200/50 border border-white/10 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:border-primary/50"
-                      placeholder="e.g., IPH-15-PM-256"
-                    />
-                  </div>
+                  {!(serviceFormMode || (selectedProduct as any)?.isService) && (
+                    <>
+                      <div className="md:col-span-1">
+                        <label className="block text-white/70 text-sm mb-2">Other Images</label>
+                        <input type="hidden" name="images" value={galleryUrls.join(',')} />
+                        <div className="flex flex-wrap items-center gap-2">
+                          {galleryUrls.map((url, idx) => (
+                            <div key={idx} className="relative">
+                              <img src={url} alt={`extra-${idx}`} className="w-16 h-16 object-cover rounded-lg border border-white/10" />
+                              <button
+                                type="button"
+                                onClick={() => setGalleryUrls(prev => prev.filter((_, i) => i !== idx))}
+                                className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center"
+                                aria-label="Remove image"
+                              >×</button>
+                            </div>
+                          ))}
+                          <label className="w-16 h-16 rounded-lg border border-dashed border-white/20 flex items-center justify-center text-white/40 text-xs cursor-pointer hover:border-primary/60 hover:text-primary">
+                            {uploadingGallery ? '…' : '+ Add'}
+                            <input
+                              type="file"
+                              accept="image/*"
+                              multiple
+                              className="hidden"
+                              disabled={uploadingGallery}
+                              onChange={(e) => { if (e.target.files) uploadGalleryImages(e.target.files); e.currentTarget.value = ''; }}
+                            />
+                          </label>
+                        </div>
+                      </div>
 
-                  <div className="md:col-span-1">
-                    <label className="block text-white/70 text-sm mb-2">Main Image URL *</label>
-                    <input
-                      type="url"
-                      name="image"
-                      defaultValue={selectedProduct?.image}
-                      required
-                      className="w-full px-4 py-3 bg-dark-200/50 border border-white/10 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:border-primary/50"
-                      placeholder="https://example.com/image.jpg"
-                    />
-                  </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-white/70 text-sm mb-2">Filter Details</label>
+                        <p className="text-xs text-white/40 mb-3">
+                          These values become dropdown filters in the shop sidebar for this category.
+                        </p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {quickSpecFields.map((field) => (
+                            <input
+                              key={field}
+                              type="text"
+                              name={`spec:${field}`}
+                              defaultValue={readSpecs(selectedProduct)[field] || ''}
+                              className="w-full px-4 py-3 bg-dark-200/50 border border-white/10 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:border-primary/50"
+                              placeholder={field}
+                            />
+                          ))}
+                        </div>
+                      </div>
 
-                  <div className="md:col-span-1">
-                    <label className="block text-white/70 text-sm mb-2">Other Images (Comma Separated)</label>
-                    <input
-                      type="text"
-                      name="images"
-                      defaultValue={selectedProduct?.images ? (typeof selectedProduct.images === 'string' ? JSON.parse(selectedProduct.images).join(', ') : selectedProduct.images.join(', ')) : ''}
-                      className="w-full px-4 py-3 bg-dark-200/50 border border-white/10 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:border-primary/50"
-                      placeholder="URL1, URL2, ..."
-                    />
-                  </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-white/70 text-sm mb-2">Specifications (JSON format)</label>
+                        <textarea
+                          name="specs"
+                          defaultValue={selectedProduct?.specs ? JSON.stringify(selectedProduct.specs, null, 2) : ''}
+                          rows={4}
+                          className="w-full px-4 py-3 bg-dark-200/50 border border-white/10 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:border-primary/50 font-mono text-xs resize-y"
+                          placeholder='{"Processor": "Intel Core i7", "RAM": "16GB DDR5"}'
+                        />
+                      </div>
 
-                  <div className="md:col-span-2">
-                    <label className="block text-white/70 text-sm mb-2">Specifications (JSON format)</label>
-                    <textarea
-                      name="specs"
-                      defaultValue={selectedProduct?.specs ? JSON.stringify(selectedProduct.specs, null, 2) : ''}
-                      rows={4}
-                      className="w-full px-4 py-3 bg-dark-200/50 border border-white/10 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:border-primary/50 font-mono text-xs resize-y"
-                      placeholder='{"Processor": "Intel Core i7", "RAM": "16GB DDR5"}'
-                    />
-                  </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-white/70 text-sm mb-2">Features (Line separated or JSON Array)</label>
+                        <textarea
+                          name="features"
+                          defaultValue={selectedProduct?.features ? (typeof selectedProduct.features === 'string' ? JSON.parse(selectedProduct.features).join('\n') : selectedProduct.features.join('\n')) : ''}
+                          rows={4}
+                          className="w-full px-4 py-3 bg-dark-200/50 border border-white/10 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:border-primary/50 text-sm resize-y"
+                          placeholder='Ultra-fast performance&#10;Stunning 4K display'
+                        />
+                      </div>
 
-                  <div className="md:col-span-2">
-                    <label className="block text-white/70 text-sm mb-2">Features (Line separated or JSON Array)</label>
-                    <textarea
-                      name="features"
-                      defaultValue={selectedProduct?.features ? (typeof selectedProduct.features === 'string' ? JSON.parse(selectedProduct.features).join('\n') : selectedProduct.features.join('\n')) : ''}
-                      rows={4}
-                      className="w-full px-4 py-3 bg-dark-200/50 border border-white/10 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:border-primary/50 text-sm resize-y"
-                      placeholder='Ultra-fast performance&#10;Stunning 4K display'
-                    />
-                  </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-white/70 text-sm mb-2">Compatible Devices (optional)</label>
+                        <p className="text-xs text-white/40 mb-2">
+                          For accessories like batteries — pick the laptop models this part fits. The repair page filters batteries by the brand of these laptops.
+                        </p>
+                        <CompatibleProductsPicker
+                          allProducts={dbProducts.filter(p => !(p as any).isService && p.category === 'laptops')}
+                          initialIds={(() => {
+                            const c = (selectedProduct as any)?.compatibility;
+                            if (!c) return [] as string[];
+                            try { const arr = typeof c === 'string' ? JSON.parse(c) : c; return Array.isArray(arr) ? arr.map(String) : []; }
+                            catch { return []; }
+                          })()}
+                        />
+                      </div>
+                    </>
+                  )}
 
                   <div className="md:col-span-2">
                     <label className="flex items-center gap-2 text-white cursor-pointer">
@@ -1533,6 +1802,7 @@ const AdminDashboard: React.FC = () => {
                       setShowProductForm(false);
                       setSelectedProduct(null);
                       setServiceFormMode(false);
+                      setProductFormCategory('');
                     }}
                     className="flex-1 py-3 bg-dark-200/50 text-white font-semibold rounded-xl hover:bg-dark-200 transition-colors"
                   >
@@ -1550,6 +1820,192 @@ const AdminDashboard: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
+    </div>
+  );
+};
+
+/* ─────────────────────────────────────────────────────────── */
+/*  CompatibleProductsPicker — multi-select with hidden input  */
+/* ─────────────────────────────────────────────────────────── */
+const CompatibleProductsPicker: React.FC<{ allProducts: any[]; initialIds: string[] }> = ({ allProducts, initialIds }) => {
+  const [selected, setSelected] = useState<string[]>(initialIds);
+  const [search, setSearch] = useState('');
+  const [filterCat, setFilterCat] = useState('');
+  const [filterSub, setFilterSub] = useState('');
+  const categories = Array.from(new Set(allProducts.map(p => p.category).filter(Boolean)));
+  const subcategories = Array.from(new Set(
+    allProducts
+      .filter(p => !filterCat || p.category === filterCat)
+      .map(p => p.subcategory)
+      .filter(Boolean)
+  ));
+
+  const visible = allProducts.filter(p => {
+    if (filterCat && p.category !== filterCat) return false;
+    if (filterSub && p.subcategory !== filterSub) return false;
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return p.name?.toLowerCase().includes(q) || (p.brand || '').toLowerCase().includes(q) || (p.subcategory || '').toLowerCase().includes(q);
+  }).slice(0, 80);
+
+  const toggle = (id: string) => setSelected(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+
+  return (
+    <div className="border border-white/10 rounded-xl p-3 bg-dark-200/30">
+      <input type="hidden" name="compatibleProductIds" value={selected.join(',')} />
+      <div className="flex flex-wrap gap-2 mb-3">
+        <input
+          type="text" value={search} onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search products..."
+          className="flex-1 min-w-[160px] px-3 py-2 bg-dark-200/50 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-primary/50"
+        />
+        <select
+          value={filterCat} onChange={(e) => { setFilterCat(e.target.value); setFilterSub(''); }}
+          className="px-3 py-2 bg-dark-200/50 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-primary/50"
+        >
+          <option value="">All categories</option>
+          {categories.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
+        <select
+          value={filterSub} onChange={(e) => setFilterSub(e.target.value)}
+          className="px-3 py-2 bg-dark-200/50 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-primary/50"
+        >
+          <option value="">All subcategories</option>
+          {subcategories.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
+        <button type="button" onClick={() => setSelected([])}
+          className="px-3 py-2 text-xs text-white/60 hover:text-white border border-white/10 rounded-lg">
+          Clear
+        </button>
+      </div>
+      {selected.length > 0 && (
+        <p className="text-xs text-primary mb-2">{selected.length} selected</p>
+      )}
+      <div className="max-h-64 overflow-auto grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+        {visible.length === 0 ? (
+          <p className="text-xs text-white/40 col-span-2 py-4 text-center">No matching products.</p>
+        ) : visible.map(p => {
+          const isSel = selected.includes(p.id);
+          return (
+            <button type="button" key={p.id} onClick={() => toggle(p.id)}
+              className={`flex items-center gap-2 p-2 rounded text-left text-xs transition-colors ${
+                isSel ? 'bg-primary/20 border border-primary/40' : 'border border-white/5 hover:border-white/20'
+              }`}
+            >
+              <div className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${isSel ? 'bg-primary border-primary' : 'border-white/30'}`}>
+                {isSel && <svg className="w-3 h-3 text-dark" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-white truncate">{p.name}</p>
+                <p className="text-white/40 truncate">{p.brand || ''} {p.category ? `· ${p.category}` : ''}</p>
+              </div>
+              <span className="text-white/40 font-mono">Rs. {Number(p.price || 0).toLocaleString('en-LK')}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+/* ─────────────────────────────────────────────────────────── */
+/*  FilterCategoriesAdmin — CRUD for sidebar filter categories */
+/* ─────────────────────────────────────────────────────────── */
+interface FilterCat { id: string; slug: string; name: string; parentSlug?: string | null; order: number; visible: boolean }
+
+const FilterCategoriesAdmin: React.FC = () => {
+  const [cats, setCats] = useState<FilterCat[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [name, setName] = useState('');
+  const [slug, setSlug] = useState('');
+  const [parentSlug, setParentSlug] = useState('');
+  const [order, setOrder] = useState<number>(0);
+
+  const load = async () => {
+    setLoading(true); setError(null);
+    try {
+      const res = await api.get('/filter-categories?includeHidden=true');
+      setCats(res.data?.categories || []);
+    } catch { setError('Failed to load categories.'); }
+    finally { setLoading(false); }
+  };
+  useEffect(() => { load(); }, []);
+
+  const create = async () => {
+    setError(null);
+    if (!name.trim()) { setError('Name is required.'); return; }
+    try {
+      await api.post('/filter-categories', { name, slug: slug || undefined, parentSlug: parentSlug || undefined, order });
+      setName(''); setSlug(''); setParentSlug(''); setOrder(0);
+      await load();
+    } catch (err: any) {
+      setError(err?.response?.data?.error || 'Failed to create.');
+    }
+  };
+
+  const remove = async (id: string) => {
+    if (!confirm('Delete this category?')) return;
+    try { await api.delete(`/filter-categories/${id}`); await load(); }
+    catch { setError('Failed to delete.'); }
+  };
+
+  const toggleVisible = async (cat: FilterCat) => {
+    try { await api.patch(`/filter-categories/${cat.id}`, { visible: !cat.visible }); await load(); }
+    catch { setError('Failed to update.'); }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-dark-100/50 border border-white/10 rounded-xl p-5">
+        <h3 className="text-white text-lg font-bold mb-1">Add Filter Category</h3>
+        <p className="text-xs text-white/40 mb-4">Categories shown in the shop sidebar. Slug is auto-generated from name if blank.</p>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name (e.g. Laptops)"
+            className="px-3 py-2 bg-dark-200/50 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-primary/50" />
+          <input value={slug} onChange={(e) => setSlug(e.target.value)} placeholder="Slug (optional)"
+            className="px-3 py-2 bg-dark-200/50 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-primary/50" />
+          <input value={parentSlug} onChange={(e) => setParentSlug(e.target.value)} placeholder="Parent slug (subcat, optional)"
+            className="px-3 py-2 bg-dark-200/50 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-primary/50" />
+          <input type="number" value={order} onChange={(e) => setOrder(Number(e.target.value))} placeholder="Order"
+            className="px-3 py-2 bg-dark-200/50 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-primary/50" />
+        </div>
+        {error && <p className="text-red-400 text-xs mt-2">{error}</p>}
+        <button onClick={create}
+          className="mt-3 px-5 py-2 bg-primary text-dark font-semibold rounded-lg text-sm hover:bg-primary/90">
+          Add Category
+        </button>
+      </div>
+
+      <div className="bg-dark-100/50 border border-white/10 rounded-xl p-5">
+        <h3 className="text-white text-lg font-bold mb-4">Existing Categories ({cats.length})</h3>
+        {loading ? (
+          <p className="text-white/50 text-sm">Loading...</p>
+        ) : cats.length === 0 ? (
+          <p className="text-white/40 text-sm">No filter categories yet. Add one above.</p>
+        ) : (
+          <div className="divide-y divide-white/5">
+            {cats.map(c => (
+              <div key={c.id} className="py-3 flex items-center gap-4">
+                <div className="flex-1 min-w-0">
+                  <p className="text-white text-sm font-medium">{c.name}</p>
+                  <p className="text-white/40 text-xs font-mono">
+                    {c.slug}{c.parentSlug ? ` · parent: ${c.parentSlug}` : ''} · order: {c.order}
+                  </p>
+                </div>
+                <button onClick={() => toggleVisible(c)}
+                  className={`px-3 py-1.5 text-xs rounded ${c.visible ? 'bg-primary/20 text-primary' : 'bg-dark-200 text-white/50'}`}>
+                  {c.visible ? 'Visible' : 'Hidden'}
+                </button>
+                <button onClick={() => remove(c.id)}
+                  className="px-3 py-1.5 text-xs text-red-400 hover:text-red-300 border border-red-400/20 rounded">
+                  Delete
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

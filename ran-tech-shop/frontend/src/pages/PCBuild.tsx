@@ -4,7 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import type { Product } from '../types';
 import { useCartStore } from '../store/cartStore';
-import { allProducts as mockProducts } from '../utils/mockData';
+import EmailQuoteButton from '../components/ui/EmailQuoteButton';
+import { useAuthStore } from '../store/authStore';
 
 /* ─── Build Categories ───────────────────────────────────────── */
 const BUILD_CATEGORIES = [
@@ -276,102 +277,6 @@ const PCBuild: React.FC = () => {
     const cat = BUILD_CATEGORIES[activeStep] as (typeof BUILD_CATEGORIES)[number] & { keywords?: string[] };
     if (products[cat.key]?.length) return;
 
-    const buildMockFallback = (): Product[] => {
-      const matchSub = (s?: string) =>
-        !cat.sub || s?.toLowerCase() === cat.sub.toLowerCase();
-
-      // ONLY accept mock products whose category or subcategory clearly matches the
-      // build part. never match on free-text specs/names (otherwise a laptop with an
-      // i7 CPU appears under "Processor"). Better to fall through to the curated
-      // sample list below than mislabel a finished laptop as a CPU.
-      const isLaptop = (p: typeof mockProducts[number]) =>
-        p.category?.toLowerCase() === 'laptops';
-      const exact = mockProducts.filter(
-        (p) =>
-          !isLaptop(p) &&
-          p.category?.toLowerCase() === cat.cat.toLowerCase() &&
-          matchSub(p.subcategory)
-      );
-      if (exact.length > 0) return exact.slice(0, 12) as unknown as Product[];
-
-      // Last resort: hand-curated component samples so the page is never empty
-      const FAKE_IMG: Record<string, string> = {
-        processor: 'https://images.unsplash.com/photo-1555680202-c86f0e12f086?w=600&q=80',
-        motherboard: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=600&q=80',
-        gpu: 'https://images.unsplash.com/photo-1591488320449-011701bb6704?w=600&q=80',
-        ram: 'https://images.unsplash.com/photo-1591488320449-011701bb6704?w=600&q=80',
-        storage: 'https://images.unsplash.com/photo-1597872200969-2b65d56bd16b?w=600&q=80',
-        cooler: 'https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=600&q=80',
-        psu: 'https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=600&q=80',
-        case: 'https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=600&q=80',
-      };
-      const SAMPLES: Record<string, Array<{ name: string; brand: string; price: number; description: string }>> = {
-        processor: [
-          { name: 'Ryzen 7 7800X3D', brand: 'AMD', price: 165000, description: '8-core gaming CPU with 3D V-Cache' },
-          { name: 'Ryzen 9 7950X', brand: 'AMD', price: 215000, description: '16-core / 32-thread workstation CPU' },
-          { name: 'Core i7-14700K', brand: 'Intel', price: 175000, description: '20-core hybrid desktop CPU' },
-          { name: 'Core i9-14900K', brand: 'Intel', price: 245000, description: '24-core flagship desktop CPU' },
-        ],
-        motherboard: [
-          { name: 'ROG STRIX B650-A', brand: 'ASUS', price: 78000, description: 'AM5 ATX gaming board, DDR5, PCIe 5.0' },
-          { name: 'MAG Z790 Tomahawk', brand: 'MSI', price: 92000, description: 'LGA1700 ATX, DDR5, Wi-Fi 6E' },
-          { name: 'TUF Gaming X670E-Plus', brand: 'ASUS', price: 115000, description: 'AM5 ATX, PCIe 5.0, robust VRM' },
-          { name: 'AORUS B650 Elite AX', brand: 'Gigabyte', price: 72000, description: 'AM5 ATX with built-in Wi-Fi' },
-        ],
-        psu: [
-          { name: 'RM850x 850W 80+ Gold', brand: 'Corsair', price: 48000, description: 'Fully modular ATX power supply' },
-          { name: 'Strix 1000W 80+ Platinum', brand: 'ASUS', price: 78000, description: 'High-efficiency 1000W PSU' },
-          { name: 'MWE 750 V2 80+ Bronze', brand: 'Cooler Master', price: 28000, description: 'Reliable 750W ATX PSU' },
-          { name: 'SuperNOVA 850 GA', brand: 'EVGA', price: 52000, description: '850W fully modular gold-rated PSU' },
-        ],
-        case: [
-          { name: 'Lian Li Lancool 216', brand: 'Lian Li', price: 38000, description: 'Mid-tower with mesh front and 3 fans' },
-          { name: 'NZXT H7 Flow', brand: 'NZXT', price: 45000, description: 'Airflow-focused mid-tower' },
-          { name: 'Corsair 4000D Airflow', brand: 'Corsair', price: 32000, description: 'High-airflow ATX mid-tower' },
-          { name: 'Fractal North', brand: 'Fractal Design', price: 56000, description: 'Wood-accent design ATX case' },
-        ],
-        cooler: [
-          { name: 'Hyper 212 Black Edition', brand: 'Cooler Master', price: 12000, description: 'Tower air cooler' },
-          { name: 'NH-D15', brand: 'Noctua', price: 38000, description: 'Dual-tower premium air cooler' },
-          { name: 'Liquid Freezer III 360', brand: 'Arctic', price: 42000, description: '360mm AIO liquid cooler' },
-          { name: 'Kraken X63', brand: 'NZXT', price: 56000, description: '280mm AIO with infinity-mirror display' },
-        ],
-        ram: [
-          { name: 'Vengeance 32GB DDR5-6000', brand: 'Corsair', price: 28000, description: '2×16GB DDR5 6000MT/s' },
-          { name: 'Trident Z5 32GB DDR5-6400', brand: 'G.Skill', price: 34000, description: '2×16GB DDR5 6400MT/s CL32' },
-          { name: 'Fury Beast 16GB DDR4-3200', brand: 'Kingston', price: 12500, description: '2×8GB DDR4 3200MHz' },
-          { name: 'Ripjaws S5 64GB DDR5-5600', brand: 'G.Skill', price: 56000, description: '2×32GB DDR5 5600MT/s' },
-        ],
-        storage: [
-          { name: 'Samsung 990 Pro 1TB', brand: 'Samsung', price: 32000, description: 'PCIe 4.0 NVMe SSD' },
-          { name: 'WD Black SN850X 2TB', brand: 'Western Digital', price: 58000, description: 'Gen4 NVMe SSD for gaming' },
-          { name: 'Crucial T700 1TB', brand: 'Crucial', price: 48000, description: 'PCIe 5.0 NVMe SSD' },
-          { name: 'Samsung 870 EVO 1TB', brand: 'Samsung', price: 22000, description: '2.5" SATA SSD' },
-        ],
-        gpu: [
-          { name: 'GeForce RTX 4070 Super', brand: 'NVIDIA', price: 195000, description: '12GB GDDR6X gaming GPU' },
-          { name: 'GeForce RTX 4080 Super', brand: 'NVIDIA', price: 360000, description: '16GB GDDR6X high-end GPU' },
-          { name: 'Radeon RX 7900 XT', brand: 'AMD', price: 285000, description: '20GB high-performance GPU' },
-          { name: 'GeForce RTX 4060 Ti', brand: 'NVIDIA', price: 145000, description: '8GB GDDR6 1080p/1440p GPU' },
-        ],
-      };
-      const samples = SAMPLES[cat.key];
-      if (!samples) return [];
-      return samples.map((s, idx) => ({
-        id: `${cat.key}-sample-${idx}`,
-        name: s.name,
-        brand: s.brand,
-        price: s.price,
-        image: FAKE_IMG[cat.key] || FAKE_IMG.processor,
-        category: cat.cat,
-        subcategory: cat.sub || undefined,
-        description: s.description,
-        specs: {} as any,
-        stock: 10,
-        featured: false,
-      })) as unknown as Product[];
-    };
-
     const fetchProducts = async () => {
       setLoading((p) => ({ ...p, [cat.key]: true }));
 
@@ -410,13 +315,9 @@ const PCBuild: React.FC = () => {
           );
         }
 
-        // 3) Final fallback: client-side mock so the page never goes empty
-        setProducts((p) => ({
-          ...p,
-          [cat.key]: list.length > 0 ? list : buildMockFallback(),
-        }));
+        setProducts((p) => ({ ...p, [cat.key]: list }));
       } catch {
-        setProducts((p) => ({ ...p, [cat.key]: buildMockFallback() }));
+        setProducts((p) => ({ ...p, [cat.key]: [] }));
       } finally {
         setLoading((p) => ({ ...p, [cat.key]: false }));
       }
@@ -1006,6 +907,8 @@ const SummaryView: React.FC<{
         </div>
       </div>
 
+      <BuildEmailQuote selections={selections} totalPrice={totalPrice} />
+
       <motion.button
         onClick={onCheckout}
         whileHover={{ scale: selectedCount > 0 ? 1.01 : 1 }}
@@ -1029,5 +932,33 @@ const SummaryView: React.FC<{
     </div>
   </motion.div>
 );
+
+/* Email-quote helper for the build summary. Reads user from auth store. */
+const BuildEmailQuote: React.FC<{ selections: Record<string, Product | null>; totalPrice: number }> = ({ selections, totalPrice }) => {
+  const user = useAuthStore((s) => s.user);
+  const items = BUILD_CATEGORIES
+    .map((cat) => ({ cat, product: selections[cat.key] }))
+    .filter((x) => !!x.product)
+    .map(({ cat, product }) => ({
+      name: `${cat.label}: ${product!.name}`,
+      description: product!.brand || undefined,
+      price: Number(product!.price) || 0,
+    }));
+  if (items.length === 0) return null;
+  return (
+    <div className="mb-4 flex justify-end">
+      <EmailQuoteButton
+        type="build"
+        variant="light"
+        items={items}
+        total={totalPrice}
+        defaultEmail={user?.email || ''}
+        defaultName={user?.name || ''}
+        notes="Custom PC build quotation. Free assembly & 72-hour stress testing included."
+        label="Email me this build quote"
+      />
+    </div>
+  );
+};
 
 export default PCBuild;

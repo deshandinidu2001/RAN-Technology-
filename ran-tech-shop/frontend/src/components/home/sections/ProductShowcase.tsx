@@ -4,7 +4,7 @@ import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { ScrollFloat, TiltedCard } from '../animations';
 import api from '../../../utils/api';
-import type { MockProduct as Product } from '../../../utils/mockData';
+import type { Product } from '../../../types';
 import { Link } from 'react-router-dom';
 
 gsap.registerPlugin(ScrollTrigger);

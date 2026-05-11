@@ -6,6 +6,7 @@ import {
   updateOrderStatus,
   cancelOrder,
   getAllOrders,
+  deleteOrder,
 } from '../controllers/orderController';
 import { authenticate, optionalAuth } from '../middleware/auth';
 
@@ -20,5 +21,6 @@ router.post('/:id/cancel', authenticate, cancelOrder);
 
 // Admin routes
 router.put('/:id/status', optionalAuth, updateOrderStatus);
+router.delete('/:id', optionalAuth, deleteOrder);
 
 export default router;

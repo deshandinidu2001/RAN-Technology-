@@ -1,32 +1,19 @@
 import express, { Express, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { PrismaClient } from '@prisma/client';
 import path from 'path';
+
+// Load environment variables from the backend folder in both src and dist builds.
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 import authRoutes from './routes/auth';
 import productRoutes from './routes/products';
 import orderRoutes from './routes/orders';
 import repairRoutes from './routes/repairs';
-
-// Load environment variables from the backend folder in both src and dist builds.
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
-const bundledDatabaseUrl = `file:${path.resolve(__dirname, '../prisma/dev.db')}`;
-// In development default to an included SQLite DB when DATABASE_URL is missing.
-// In production we must NOT silently override DATABASE_URL — require it to be
-// provided via environment variables (Vercel project settings).
-if (process.env.NODE_ENV === 'development') {
-  if (!process.env.DATABASE_URL) {
-    process.env.DATABASE_URL = bundledDatabaseUrl;
-  }
-} else {
-  if (!process.env.DATABASE_URL) {
-    console.warn('⚠️  No DATABASE_URL set for production. Set DATABASE_URL in environment.');
-  }
-}
-
-// Initialize Prisma client
-export const prisma = new PrismaClient();
+import quoteRoutes from './routes/quotes';
+import filterCategoryRoutes from './routes/filterCategories';
+import uploadRoutes from './routes/uploads';
+import userRoutes from './routes/users';
 
 // Create Express app
 const app: Express = express();
@@ -47,8 +34,8 @@ app.use(cors({
   origin: corsOrigins,
   credentials: true,
 }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Request logging middleware
 app.use((req: Request, _res: Response, next: NextFunction) => {
@@ -58,14 +45,12 @@ app.use((req: Request, _res: Response, next: NextFunction) => {
 
 // Health check endpoint
 app.get('/api/health', (_req: Request, res: Response) => {
-  res.json({ 
-    status: 'ok', 
+  res.json({
+    status: 'ok',
     message: 'RAN Tech Shop API is running',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   });
 });
-
-import userRoutes from './routes/users';
 
 // API Routes
 app.use('/api/auth', authRoutes);
@@ -73,6 +58,9 @@ app.use('/api/users', userRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/repairs', repairRoutes);
+app.use('/api/quotes', quoteRoutes);
+app.use('/api/filter-categories', filterCategoryRoutes);
+app.use('/api/uploads', uploadRoutes);
 
 // 404 handler
 app.use((_req: Request, res: Response) => {
@@ -83,24 +71,11 @@ app.use((_req: Request, res: Response) => {
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   console.error('Error:', err.message);
   console.error('Stack:', err.stack);
-  
-  res.status(500).json({ 
+
+  res.status(500).json({
     error: 'Internal server error',
-    message: process.env.NODE_ENV === 'development' ? err.message : undefined
+    message: process.env.NODE_ENV === 'development' ? err.message : undefined,
   });
-});
-
-// Graceful shutdown
-process.on('SIGINT', async () => {
-  console.log('\n🛑 Shutting down gracefully...');
-  await prisma.$disconnect();
-  process.exit(0);
-});
-
-process.on('SIGTERM', async () => {
-  console.log('\n🛑 Shutting down gracefully...');
-  await prisma.$disconnect();
-  process.exit(0);
 });
 
 // Start server
@@ -112,6 +87,8 @@ app.listen(PORT, () => {
   ║                                                       ║
   ║   Server running at: http://localhost:${PORT}          ║
   ║   Environment: ${process.env.NODE_ENV || 'development'}                       ║
+  ║   Database: Supabase                                  ║
+  ║   Image storage: Cloudinary                           ║
   ║                                                       ║
   ╚═══════════════════════════════════════════════════════╝
   `);

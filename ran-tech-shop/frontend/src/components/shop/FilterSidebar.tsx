@@ -1,8 +1,14 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import api from '../../utils/api';
+
+interface AdminFilterCat { id: string; slug: string; name: string; order: number; visible: boolean; parentSlug?: string | null }
 
 interface ProductFilters {
   brands: string[];
+  subcategories?: string[];
+  conditions?: string[];
+  specFilters?: Array<{ key: string; values: string[] }>;
   ramTypes: string[];
   ramSpeeds: number[];
   ramCapacities: number[];
@@ -37,6 +43,10 @@ interface FilterSidebarProps {
   filters?: ProductFilters | null;
   selectedBrand?: string | null;
   onBrandChange?: (brand: string | null) => void;
+  selectedCondition?: string | null;
+  onConditionChange?: (condition: string | null) => void;
+  selectedSpecFilters?: Record<string, string>;
+  onSpecFilterChange?: (key: string, value: string | null) => void;
   selectedRamType?: string | null;
   onRamTypeChange?: (ramType: string | null) => void;
   selectedRamSpeed?: number | null;
@@ -152,6 +162,10 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
   filters,
   selectedBrand,
   onBrandChange,
+  selectedCondition,
+  onConditionChange,
+  selectedSpecFilters = {},
+  onSpecFilterChange,
   selectedRamType,
   onRamTypeChange,
   selectedRamSpeed,
@@ -167,6 +181,10 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
   onResetFilters,
 }) => {
   const [localPriceRange, setLocalPriceRange] = useState(priceRange);
+  const [adminCats, setAdminCats] = useState<AdminFilterCat[]>([]);
+  useEffect(() => {
+    api.get('/filter-categories').then(r => setAdminCats(r.data?.categories || [])).catch(() => {});
+  }, []);
 
   const sortOptions = [
     { value: 'featured', label: 'Featured' },
@@ -189,6 +207,8 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
 
   const activeSpecFilterCount =
     (selectedBrand ? 1 : 0) +
+    (selectedCondition ? 1 : 0) +
+    Object.values(selectedSpecFilters).filter(Boolean).length +
     (selectedRamType ? 1 : 0) +
     (selectedRamSpeed ? 1 : 0) +
     (selectedRamCapacity ? 1 : 0) +
@@ -201,6 +221,8 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
     (selectedCategory ? 1 : 0) +
     (selectedSubcategory ? 1 : 0) +
     (selectedBrand ? 1 : 0) +
+    (selectedCondition ? 1 : 0) +
+    Object.values(selectedSpecFilters).filter(Boolean).length +
     (selectedRamType ? 1 : 0) +
     (selectedRamSpeed ? 1 : 0) +
     (selectedRamCapacity ? 1 : 0) +
@@ -210,6 +232,7 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
 
   const selectCls =
     'w-full px-3 py-2 bg-transparent border-b border-white/10 text-white/80 text-xs focus:outline-none focus:border-[#F7B500] transition-colors appearance-none cursor-pointer';
+  const hiddenParentSlugs = new Set(['laptop-accessories', 'components']);
 
   // Note: do NOT redeclare this as a nested React component (`const FilterContent = () => (...)`).
   // A nested component is a brand-new function reference on every parent render, so React
@@ -262,7 +285,7 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
         </div>
       )}
 
-      {/* ── Categories ── */}
+      {/* ── Categories (merged with admin-managed list) ── */}
       <Group label="Categories">
         <div className="space-y-0.5">
           <Chip
@@ -272,25 +295,43 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
           >
             All Products
           </Chip>
-          {categories.map((c) => (
-            <Chip
-              key={c.slug}
-              active={selectedCategory === c.slug}
-              onClick={() => onCategoryChange(c.slug)}
-              count={c.count}
-            >
-              {c.name}
-            </Chip>
-          ))}
+          {(() => {
+            // Hide categories the admin marked hidden; reorder by admin `order`; add admin-only categories with count 0.
+            const adminBySlug = new Map(adminCats.map(c => [c.slug, c]));
+            const visibleParent = adminCats.filter(c => c.visible && !c.parentSlug && !hiddenParentSlugs.has(c.slug));
+            const hiddenSlugs = new Set([
+              ...adminCats.filter(c => !c.visible && !c.parentSlug).map(c => c.slug),
+              ...hiddenParentSlugs,
+            ]);
+            const merged = [
+              ...visibleParent.map(ac => {
+                const found = categories.find(c => c.slug === ac.slug);
+                return { name: ac.name, slug: ac.slug, count: found?.count || 0, _order: ac.order };
+              }),
+              ...categories
+                .filter(c => !adminBySlug.has(c.slug) && !hiddenSlugs.has(c.slug))
+                .map(c => ({ ...c, _order: 999 })),
+            ];
+            return merged.sort((a, b) => a._order - b._order).map((c) => (
+              <Chip
+                key={c.slug}
+                active={selectedCategory === c.slug}
+                onClick={() => onCategoryChange(c.slug)}
+                count={c.count}
+              >
+                {c.name}
+              </Chip>
+            ));
+          })()}
         </div>
       </Group>
 
       {/* ── Subcategories ── */}
-      {(selectedCategory === 'laptop-accessories' || selectedCategory === 'components') && subcategories.length > 0 && (
+      {selectedCategory && subcategories.length > 0 && (
         <Group label="Product Type">
           <div className="space-y-0.5">
             <Chip active={!selectedSubcategory} onClick={() => onSubcategoryChange?.(null)}>
-              {selectedCategory === 'components' ? 'All Components' : 'All Accessories'}
+              All {categories.find((cat) => cat.slug === selectedCategory)?.name || 'Products'}
             </Chip>
             {subcategories.map((sub) => (
               <Chip
@@ -307,7 +348,7 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
       )}
 
       {/* ── Specifications ── */}
-      {selectedCategory === 'laptop-accessories' && selectedSubcategory && filters && (
+      {selectedCategory && filters && (
         <Group label="Specifications" badge={hasActiveSpecFilters ? activeSpecFilterCount : ''}>
           <div className="space-y-4">
             {filters.brands.length > 0 && (
@@ -329,6 +370,40 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
                 </select>
               </div>
             )}
+
+            {(filters.conditions || []).length > 0 && (
+              <div>
+                <p className="text-[10px] text-white/30 uppercase tracking-widest mb-1">Condition</p>
+                <select
+                  value={selectedCondition || ''}
+                  onChange={(e) => onConditionChange?.(e.target.value || null)}
+                  className={selectCls}
+                >
+                  <option value="" className="bg-[#0A0A0B]">Any Condition</option>
+                  {(filters.conditions || []).map((condition) => (
+                    <option key={condition} value={condition} className="bg-[#0A0A0B]">
+                      {condition === 'new' ? 'Brand New' : condition.charAt(0).toUpperCase() + condition.slice(1)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {(filters.specFilters || []).map((filter) => (
+              <div key={filter.key}>
+                <p className="text-[10px] text-white/30 uppercase tracking-widest mb-1">{filter.key}</p>
+                <select
+                  value={selectedSpecFilters[filter.key] || ''}
+                  onChange={(e) => onSpecFilterChange?.(filter.key, e.target.value || null)}
+                  className={selectCls}
+                >
+                  <option value="" className="bg-[#0A0A0B]">All {filter.key}</option>
+                  {filter.values.map((value) => (
+                    <option key={value} value={value} className="bg-[#0A0A0B]">{value}</option>
+                  ))}
+                </select>
+              </div>
+            ))}
 
             {selectedSubcategory === 'ram' && (
               <>
@@ -447,6 +522,16 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
               <div className="pt-1 flex flex-wrap gap-1.5">
                 {[
                   selectedBrand && { label: selectedBrand, clear: () => onBrandChange?.(null) },
+                  selectedCondition && {
+                    label: selectedCondition === 'new' ? 'Brand New' : selectedCondition,
+                    clear: () => onConditionChange?.(null),
+                  },
+                  ...Object.entries(selectedSpecFilters)
+                    .filter(([, value]) => value)
+                    .map(([key, value]) => ({
+                      label: `${key}: ${value}`,
+                      clear: () => onSpecFilterChange?.(key, null),
+                    })),
                   selectedRamType && { label: selectedRamType, clear: () => onRamTypeChange?.(null) },
                   selectedRamSpeed && {
                     label: `${selectedRamSpeed} MHz`,

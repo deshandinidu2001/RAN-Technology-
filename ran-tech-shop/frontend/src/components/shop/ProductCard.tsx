@@ -18,6 +18,20 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onQuickView }) => {
   const toggleFavorite = useFavoritesStore((s) => s.toggle);
   const isFavorite = useFavoritesStore((s) => s.isFavorite(product.id));
   const navigate = useNavigate();
+  const categoryLabel = (() => {
+    const labels: Record<string, string> = {
+      ram: 'RAM Memory',
+      ssd: 'SSD Storage',
+      battery: 'Laptop Batteries',
+      'cooling-pad': 'Cooling',
+      processor: 'Processors',
+      motherboard: 'Motherboards',
+      psu: 'Power Supplies',
+      case: 'PC Cases',
+    };
+    const slug = product.subcategory || product.category;
+    return labels[slug] || slug.replace(/-/g, ' ');
+  })();
 
   const handleToggleFavorite = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -120,13 +134,13 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onQuickView }) => {
       <div
         ref={cardRef}
         onClick={handleCardClick}
-        className="group relative bg-dark-200 rounded-2xl overflow-hidden border border-white/5 hover:border-primary/30 transition-all duration-300 perspective cursor-pointer"
+        className="group relative h-[465px] bg-dark-200 rounded-2xl overflow-hidden border border-white/5 hover:border-primary/30 transition-all duration-300 perspective cursor-pointer flex flex-col"
         style={{ transformStyle: 'preserve-3d' }}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
       >
         {/* Image container */}
-        <div className="relative h-64 overflow-hidden">
+        <div className="relative h-52 flex-shrink-0 overflow-hidden">
           <img
             ref={imageRef}
             src={product.image}
@@ -197,10 +211,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onQuickView }) => {
         </div>
 
         {/* Content */}
-        <div className="p-5">
+        <div className="p-5 flex flex-1 flex-col">
           {/* Category */}
           <p className="text-primary text-xs font-semibold uppercase tracking-wider mb-2">
-            {product.category.replace('-', ' ')}
+            {categoryLabel}
           </p>
 
           {/* Name */}
@@ -209,12 +223,12 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onQuickView }) => {
           </h3>
 
           {/* Description */}
-          <p className="text-white/50 text-sm line-clamp-2 mb-4">
+          <p className="text-white/50 text-sm line-clamp-2 mb-4 min-h-[2.5rem]">
             {product.description}
           </p>
 
           {/* Price and Add to Cart */}
-          <div className="flex items-center justify-between">
+          <div className="mt-auto flex items-end justify-between gap-3">
             <div>
               <span className="text-2xl font-bold text-white">
                 Rs. {product.price.toLocaleString()}
@@ -231,7 +245,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onQuickView }) => {
               whileTap={{ scale: 0.95 }}
               onClick={handleAddToCart}
               disabled={product.stock === 0}
-              className={`px-4 py-2 rounded-lg font-medium transition-all duration-300 ${
+              className={`px-4 py-2 rounded-lg font-medium transition-all duration-300 whitespace-nowrap ${
                 product.stock === 0
                   ? 'bg-gray-500/50 text-gray-400 cursor-not-allowed'
                   : 'bg-primary text-dark hover:bg-primary-400 hover:shadow-glow'

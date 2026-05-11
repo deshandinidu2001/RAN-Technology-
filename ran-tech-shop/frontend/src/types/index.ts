@@ -51,6 +51,7 @@ export interface Product {
   displayType?: string;
   // Compatibility
   compatibility?: string;
+  condition?: string;
   // Service fields
   isService?: boolean;
   serviceType?: string;

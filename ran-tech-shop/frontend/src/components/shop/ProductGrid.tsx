@@ -21,7 +21,7 @@ const ProductGrid: React.FC<ProductGridProps> = ({
         {[...Array(6)].map((_, index) => (
           <div
             key={index}
-            className="bg-dark-200 rounded-2xl overflow-hidden animate-pulse"
+            className="bg-dark-200 rounded-2xl overflow-hidden animate-pulse h-[465px]"
           >
             <div className="h-64 bg-dark-100" />
             <div className="p-5">
@@ -81,6 +81,7 @@ const ProductGrid: React.FC<ProductGridProps> = ({
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
             transition={{ duration: 0.3, delay: index * 0.05 }}
+            className="h-full"
           >
             <ProductCard product={product} onQuickView={onQuickView} />
           </motion.div>

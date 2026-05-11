@@ -7,6 +7,7 @@ import Button from '../components/ui/Button';
 import { useCartStore } from '../store/cartStore';
 import { useAuthStore } from '../store/authStore';
 import { useOrdersStore } from '../store/ordersStore';
+import EmailQuoteButton from '../components/ui/EmailQuoteButton';
 
 type CheckoutStep = 'cart' | 'shipping' | 'payment' | 'confirmation';
 
@@ -226,7 +227,7 @@ const Checkout: React.FC = () => {
                     ))}
                   </div>
 
-                  <div className="mt-6 pt-6 border-t border-white/10">
+                  <div className="mt-6 pt-6 border-t border-white/10 space-y-3">
                     <Button
                       variant="primary"
                       size="lg"
@@ -235,6 +236,18 @@ const Checkout: React.FC = () => {
                     >
                       Continue to Shipping
                     </Button>
+                    <div className="flex justify-center">
+                      <EmailQuoteButton
+                        type="cart"
+                        items={items.map((it) => ({ name: it.name, quantity: it.quantity, price: it.price }))}
+                        subtotal={total}
+                        tax={tax}
+                        total={grandTotal}
+                        defaultEmail={user?.email || ''}
+                        defaultName={user?.name || ''}
+                        label="Email me a price quote"
+                      />
+                    </div>
                   </div>
                 </motion.div>
               )}

@@ -6,10 +6,12 @@ import FilterSidebar from '../components/shop/FilterSidebar';
 import ProductModal from '../components/shop/ProductModal';
 import { Product } from '../types';
 import api from '../utils/api';
-import { allProducts as mockProducts } from '../utils/mockData';
 
 interface ProductFilters {
   brands: string[];
+  subcategories?: string[];
+  conditions?: string[];
+  specFilters?: Array<{ key: string; values: string[] }>;
   ramTypes: string[];
   ramSpeeds: number[];
   ramCapacities: number[];
@@ -19,6 +21,40 @@ interface ProductFilters {
 }
 
 const PRODUCTS_PER_PAGE = 12;
+
+const FLAT_CATEGORY_PARENTS: Record<string, string> = {
+  ram: 'laptop-accessories',
+  ssd: 'laptop-accessories',
+  battery: 'laptop-accessories',
+  'cooling-pad': 'laptop-accessories',
+  display: 'laptop-accessories',
+  keyboard: 'laptop-accessories',
+  mouse: 'laptop-accessories',
+  cable: 'laptop-accessories',
+  audio: 'laptop-accessories',
+  cases: 'accessories',
+  processor: 'components',
+  motherboard: 'components',
+  psu: 'components',
+  case: 'components',
+};
+
+const SHOP_CATEGORY_LABELS: Record<string, string> = {
+  ram: 'RAM Memory',
+  ssd: 'SSD Storage',
+  battery: 'Laptop Batteries',
+  'cooling-pad': 'Cooling',
+  display: 'Displays',
+  keyboard: 'Keyboards',
+  mouse: 'Mice',
+  cable: 'Cables',
+  audio: 'Audio',
+  cases: 'Laptop Cases',
+  processor: 'Processors',
+  motherboard: 'Motherboards',
+  psu: 'Power Supplies',
+  case: 'PC Cases',
+};
 
 const Shop: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -46,6 +82,8 @@ const Shop: React.FC = () => {
 
   // Advanced filters for accessories
   const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
+  const [selectedCondition, setSelectedCondition] = useState<string | null>(null);
+  const [selectedSpecFilters, setSelectedSpecFilters] = useState<Record<string, string>>({});
   const [selectedRamType, setSelectedRamType] = useState<string | null>(null);
   const [selectedRamSpeed, setSelectedRamSpeed] = useState<number | null>(null);
   const [selectedRamCapacity, setSelectedRamCapacity] = useState<number | null>(null);
@@ -64,9 +102,15 @@ const Shop: React.FC = () => {
         params.set('limit', '500');
         params.set('isService', 'false');
         
-        if (selectedCategory) params.set('category', selectedCategory);
+        const mappedParentCategory = selectedCategory ? FLAT_CATEGORY_PARENTS[selectedCategory] : undefined;
+        if (selectedCategory && !mappedParentCategory) params.set('category', selectedCategory);
+        if (mappedParentCategory && selectedCategory) params.set('subcategory', selectedCategory);
         if (selectedSubcategory) params.set('subcategory', selectedSubcategory);
         if (selectedBrand) params.set('brand', selectedBrand);
+        if (selectedCondition) params.set('condition', selectedCondition);
+        Object.entries(selectedSpecFilters).forEach(([key, value]) => {
+          if (value) params.set(`spec_${key}`, value);
+        });
         if (selectedRamType) params.set('ramType', selectedRamType);
         if (selectedRamSpeed) params.set('ramSpeed', selectedRamSpeed.toString());
         if (selectedRamCapacity) params.set('ramCapacity', selectedRamCapacity.toString());
@@ -80,19 +124,14 @@ const Shop: React.FC = () => {
         setProducts(apiProducts);
       } catch (error) {
         console.error('Failed to fetch products:', error);
-        // Fall back to centralized mock data
-        const fallback = (mockProducts as unknown as Product[]).filter(p => {
-          if (selectedCategory && p.category !== selectedCategory) return false;
-          return true;
-        });
-        setProducts(fallback);
+        setProducts([]);
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchProducts();
-  }, [selectedCategory, selectedSubcategory, selectedBrand, selectedRamType, selectedRamSpeed, selectedRamCapacity, selectedSsdType, selectedSsdCapacity, selectedCompatibility, searchQuery]);
+  }, [selectedCategory, selectedSubcategory, selectedBrand, selectedCondition, selectedSpecFilters, selectedRamType, selectedRamSpeed, selectedRamCapacity, selectedSsdType, selectedSsdCapacity, selectedCompatibility, searchQuery]);
 
   useEffect(() => {
     const fetchCatalogProducts = async () => {
@@ -102,7 +141,7 @@ const Shop: React.FC = () => {
         setCatalogProducts(Array.isArray(apiProducts) ? apiProducts : []);
       } catch (error) {
         console.error('Failed to fetch catalog products:', error);
-        setCatalogProducts(mockProducts as unknown as Product[]);
+        setCatalogProducts([]);
       }
     };
 
@@ -114,7 +153,9 @@ const Shop: React.FC = () => {
     const fetchFilters = async () => {
       try {
         const params = new URLSearchParams();
-        if (selectedCategory) params.set('category', selectedCategory);
+        const mappedParentCategory = selectedCategory ? FLAT_CATEGORY_PARENTS[selectedCategory] : undefined;
+        if (selectedCategory && !mappedParentCategory) params.set('category', selectedCategory);
+        if (mappedParentCategory && selectedCategory) params.set('subcategory', selectedCategory);
         if (selectedSubcategory) params.set('subcategory', selectedSubcategory);
         
         const response = await api.get(`/products/filters?${params.toString()}`);
@@ -133,7 +174,10 @@ const Shop: React.FC = () => {
 
     // Category filter
     if (selectedCategory) {
-      result = result.filter((p) => p.category === selectedCategory);
+      const mappedParentCategory = FLAT_CATEGORY_PARENTS[selectedCategory];
+      result = result.filter((p) =>
+        mappedParentCategory ? p.subcategory === selectedCategory : p.category === selectedCategory
+      );
     }
 
     // Price filter
@@ -211,6 +255,8 @@ const Shop: React.FC = () => {
 
   const resetAdvancedFilters = () => {
     setSelectedBrand(null);
+    setSelectedCondition(null);
+    setSelectedSpecFilters({});
     setSelectedRamType(null);
     setSelectedRamSpeed(null);
     setSelectedRamCapacity(null);
@@ -236,15 +282,26 @@ const Shop: React.FC = () => {
     }
   };
 
-  const countSource = catalogProducts.length > 0
-    ? catalogProducts
-    : (mockProducts as unknown as Product[]);
+  const countSource = catalogProducts;
 
-  const countCategory = (slug: string) =>
-    countSource.filter(p => p.category?.toLowerCase() === slug).length;
+  const countCategory = (slug: string) => {
+    const mappedParentCategory = FLAT_CATEGORY_PARENTS[slug];
+    return countSource.filter(p =>
+      mappedParentCategory
+        ? p.subcategory?.toLowerCase() === slug
+        : p.category?.toLowerCase() === slug
+    ).length;
+  };
 
   const categories = [
-    { slug: 'laptop-accessories', name: 'Laptop Accessories', count: countCategory('laptop-accessories') },
+    { slug: 'ram', name: 'RAM Memory', count: countCategory('ram') },
+    { slug: 'ssd', name: 'SSD Storage', count: countCategory('ssd') },
+    { slug: 'battery', name: 'Laptop Batteries', count: countCategory('battery') },
+    { slug: 'cooling-pad', name: 'Cooling', count: countCategory('cooling-pad') },
+    { slug: 'processor', name: 'Processors', count: countCategory('processor') },
+    { slug: 'motherboard', name: 'Motherboards', count: countCategory('motherboard') },
+    { slug: 'psu', name: 'Power Supplies', count: countCategory('psu') },
+    { slug: 'case', name: 'PC Cases', count: countCategory('case') },
     { slug: 'graphics-cards', name: 'Graphics Cards', count: countCategory('graphics-cards') },
     { slug: 'laptops', name: 'Laptops', count: countCategory('laptops') },
     { slug: 'smartphones', name: 'Smartphones', count: countCategory('smartphones') },
@@ -252,8 +309,6 @@ const Shop: React.FC = () => {
     { slug: 'monitors', name: 'Monitors', count: countCategory('monitors') },
     { slug: 'storage', name: 'Storage', count: countCategory('storage') },
     { slug: 'gaming', name: 'Gaming', count: countCategory('gaming') },
-    // PC build / components category. populates the configurator
-    { slug: 'components', name: 'PC Components', count: countCategory('components') },
   ];
 
   const BrainIcon = () => (
@@ -283,6 +338,13 @@ const Shop: React.FC = () => {
   const countSub = (slug: string) =>
     countSource.filter(p => p.subcategory?.toLowerCase() === slug).length;
 
+  const titleFromSlug = (slug: string) =>
+    slug
+      .split('-')
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ');
+
   const allSubcategories = [
     // PC components. surface the same parts the Custom Build configurator uses
     { slug: 'processor', name: 'Processors', icon: BrainIcon, count: countSub('processor'), parent: 'components' },
@@ -295,18 +357,34 @@ const Shop: React.FC = () => {
     { slug: 'cooling-pad', name: 'Cooling', icon: SnowflakeIcon, count: countSub('cooling-pad'), parent: 'laptop-accessories' },
     { slug: 'gpu', name: 'GPUs', icon: GamepadIcon, count: countSub('gpu'), parent: 'laptop-accessories' },
     { slug: 'display', name: 'Displays', icon: ComputerIcon, count: countSub('display'), parent: 'laptop-accessories' },
-    { slug: 'keyboard', name: 'Keyboards', icon: '⌨️', count: countSub('keyboard'), parent: 'laptop-accessories' },
-    { slug: 'mouse', name: 'Mice', icon: '🖱️', count: countSub('mouse'), parent: 'laptop-accessories' },
-    { slug: 'cable', name: 'USB Cables', icon: '🔌', count: countSub('cable'), parent: 'laptop-accessories' },
-    { slug: 'audio', name: 'Audio & Headsets', icon: '🎧', count: countSub('audio'), parent: 'laptop-accessories' },
-    { slug: 'cases', name: 'Laptop Cases', icon: '🎒', count: countSub('cases'), parent: 'laptop-accessories' },
+    { slug: 'keyboard', name: 'Keyboards', icon: ComputerIcon, count: countSub('keyboard'), parent: 'laptop-accessories' },
+    { slug: 'mouse', name: 'Mice', icon: ComputerIcon, count: countSub('mouse'), parent: 'laptop-accessories' },
+    { slug: 'cable', name: 'USB Cables', icon: ComputerIcon, count: countSub('cable'), parent: 'laptop-accessories' },
+    { slug: 'audio', name: 'Audio & Headsets', icon: ComputerIcon, count: countSub('audio'), parent: 'laptop-accessories' },
+    { slug: 'cases', name: 'Laptop Cases', icon: ComputerIcon, count: countSub('cases'), parent: 'laptop-accessories' },
   ];
 
-  // Only surface subcategories belonging to the active parent category. When no
-  // category is selected we hide the Product Type group entirely (the sidebar
-  // already gates rendering on this list being non-empty for the relevant parents).
+  const dynamicSubcategories = selectedCategory && !FLAT_CATEGORY_PARENTS[selectedCategory]
+    ? Array.from(new Set(
+        countSource
+          .filter((p) => p.category === selectedCategory && p.subcategory)
+          .map((p) => p.subcategory as string)
+      ))
+        .filter((slug) => !allSubcategories.some((sub) => sub.slug === slug && sub.parent === selectedCategory))
+        .map((slug) => ({
+          slug,
+          name: titleFromSlug(slug),
+          icon: ComputerIcon,
+          count: countSub(slug),
+          parent: selectedCategory,
+        }))
+    : [];
+
   const subcategories = selectedCategory
-    ? allSubcategories.filter(s => s.parent === selectedCategory)
+    ? [
+        ...allSubcategories.filter(s => s.parent === selectedCategory),
+        ...dynamicSubcategories.filter((sub) => !FLAT_CATEGORY_PARENTS[sub.slug]),
+      ]
     : [];
 
   // Pagination calculations
@@ -338,9 +416,9 @@ const Shop: React.FC = () => {
   };
 
   const headerTitle = selectedSubcategory
-    ? allSubcategories.find((c) => c.slug === selectedSubcategory)?.name
+    ? allSubcategories.find((c) => c.slug === selectedSubcategory)?.name || SHOP_CATEGORY_LABELS[selectedSubcategory]
     : selectedCategory
-    ? categories.find((c) => c.slug === selectedCategory)?.name || 'Shop'
+    ? categories.find((c) => c.slug === selectedCategory)?.name || SHOP_CATEGORY_LABELS[selectedCategory] || 'Shop'
     : 'All Products';
 
   return (
@@ -434,6 +512,17 @@ const Shop: React.FC = () => {
               filters={filters}
               selectedBrand={selectedBrand}
               onBrandChange={setSelectedBrand}
+              selectedCondition={selectedCondition}
+              onConditionChange={setSelectedCondition}
+              selectedSpecFilters={selectedSpecFilters}
+              onSpecFilterChange={(key, value) => {
+                setSelectedSpecFilters((prev) => {
+                  const next = { ...prev };
+                  if (value) next[key] = value;
+                  else delete next[key];
+                  return next;
+                });
+              }}
               selectedRamType={selectedRamType}
               onRamTypeChange={setSelectedRamType}
               selectedRamSpeed={selectedRamSpeed}

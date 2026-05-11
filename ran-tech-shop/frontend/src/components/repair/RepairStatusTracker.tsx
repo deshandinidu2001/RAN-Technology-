@@ -1,10 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useOrdersStore } from '../../store/ordersStore';
+import api from '../../utils/api';
 
-// ============================================
-// MOCK DATA - Used as fallback demo data
-// ============================================
 interface RepairRecord {
   ticketId: string;
   customerName: string;
@@ -18,68 +15,31 @@ interface RepairRecord {
   notes?: string;
 }
 
-const MOCK_REPAIR_DATA: RepairRecord[] = [
-  {
-    ticketId: '101',
-    customerName: 'John Perera',
-    customerPhone: '0771234567',
-    deviceType: 'Laptop',
-    deviceModel: 'Dell XPS 15',
-    issueDescription: 'Screen flickering issue',
-    currentStage: 1, // Diagnosing
-    estimatedCompletion: '2026-01-18',
-    technicianName: 'Kasun Silva',
-    notes: 'Initial diagnosis in progress. Suspecting GPU driver issue.',
-  },
-  {
-    ticketId: '102',
-    customerName: 'Sarah Fernando',
-    customerPhone: '0777654321',
-    deviceType: 'Laptop',
-    deviceModel: 'MacBook Pro 14"',
-    issueDescription: 'Battery not charging',
-    currentStage: 4, // Ready for Pickup
-    estimatedCompletion: '2026-01-16',
-    technicianName: 'Nimesh Jayawardena',
-    notes: 'Battery replaced successfully. Device tested and ready.',
-  },
-  {
-    ticketId: '103',
-    customerName: 'Mike Rajapaksa',
-    customerPhone: '0769876543',
-    deviceType: 'Desktop',
-    deviceModel: 'Custom Build PC',
-    issueDescription: 'Random shutdowns',
-    currentStage: 2, // Waiting for Parts
-    estimatedCompletion: '2026-01-20',
-    technicianName: 'Kasun Silva',
-    notes: 'PSU needs replacement. Waiting for 750W Corsair PSU delivery.',
-  },
-  {
-    ticketId: '104',
-    customerName: 'Priya Wickramasinghe',
-    customerPhone: '0712345678',
-    deviceType: 'Laptop',
-    deviceModel: 'HP Pavilion',
-    issueDescription: 'Keyboard not working',
-    currentStage: 3, // Repairing
-    estimatedCompletion: '2026-01-17',
-    technicianName: 'Nimesh Jayawardena',
-    notes: 'Keyboard replacement in progress.',
-  },
-  {
-    ticketId: '105',
-    customerName: 'David Silva',
-    customerPhone: '0781112233',
-    deviceType: 'Laptop',
-    deviceModel: 'ASUS ROG Strix',
-    issueDescription: 'Overheating during gaming',
-    currentStage: 0, // Received
-    estimatedCompletion: '2026-01-22',
-    technicianName: 'Pending Assignment',
-    notes: 'Device received. Will be assigned to technician shortly.',
-  },
-];
+// Backend stores `status` text; the tracker UI thinks in stage indices.
+const statusToStage = (status?: string): number => {
+  switch (status) {
+    case 'confirmed': return 1;
+    case 'in-progress': return 3;
+    case 'completed':
+    case 'cancelled': return 4;
+    case 'pending':
+    default: return 0;
+  }
+};
+
+const toRepairRecord = (b: any): RepairRecord => ({
+  ticketId: b.id,
+  customerName: b.customerName || 'Customer',
+  customerPhone: b.customerPhone || '',
+  deviceType: b.deviceType || 'Device',
+  deviceModel: b.deviceType || 'General Repair',
+  issueDescription: b.issueDescription || '',
+  currentStage: statusToStage(b.status),
+  estimatedCompletion:
+    b.completedAt?.split('T')[0] || b.date || b.createdAt?.split('T')[0] || '',
+  technicianName: 'RAN Service Team',
+  notes: b.notes || undefined,
+});
 
 // ============================================
 // REPAIR STAGES CONFIGURATION
@@ -149,9 +109,6 @@ const RepairStatusTracker: React.FC = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   
-  const { getBookingByTicketId, getBookingByPhone } = useOrdersStore();
-
-  // Search function - searches both store and mock data
   const handleSearch = async () => {
     if (!searchQuery.trim()) {
       setError('Please enter a Job Sheet Number or Mobile Number');
@@ -162,56 +119,23 @@ const RepairStatusTracker: React.FC = () => {
     setError(null);
     setSearchResult(null);
 
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 800));
-
     let result: RepairRecord | null = null;
-
-    // First, search in the store (real bookings)
-    if (searchType === 'ticket') {
-      const storeBooking = getBookingByTicketId(searchQuery.replace('#', ''));
-      if (storeBooking) {
-        result = {
-          ticketId: storeBooking.ticketId,
-          customerName: storeBooking.customerName,
-          customerPhone: storeBooking.customerPhone,
-          deviceType: storeBooking.deviceType,
-          deviceModel: storeBooking.deviceModel,
-          issueDescription: storeBooking.issueDescription,
-          currentStage: storeBooking.currentStage,
-          estimatedCompletion: storeBooking.estimatedCompletion,
-          technicianName: storeBooking.technicianName,
-          notes: `Services: ${storeBooking.services.join(', ')}`,
-        };
+    try {
+      if (searchType === 'ticket') {
+        const id = searchQuery.trim().replace(/^#/, '');
+        const res = await api.get(`/repairs/booking/${encodeURIComponent(id)}`);
+        if (res.data?.booking) result = toRepairRecord(res.data.booking);
+      } else {
+        const phone = searchQuery.trim();
+        const res = await api.get(`/repairs/my-bookings`, { params: { phone } });
+        const list = res.data?.bookings || [];
+        if (list.length > 0) result = toRepairRecord(list[0]);
       }
-    } else {
-      const storeBookings = getBookingByPhone(searchQuery);
-      if (storeBookings.length > 0) {
-        const storeBooking = storeBookings[0]; // Get the most recent
-        result = {
-          ticketId: storeBooking.ticketId,
-          customerName: storeBooking.customerName,
-          customerPhone: storeBooking.customerPhone,
-          deviceType: storeBooking.deviceType,
-          deviceModel: storeBooking.deviceModel,
-          issueDescription: storeBooking.issueDescription,
-          currentStage: storeBooking.currentStage,
-          estimatedCompletion: storeBooking.estimatedCompletion,
-          technicianName: storeBooking.technicianName,
-          notes: `Services: ${storeBooking.services.join(', ')}`,
-        };
+    } catch (err: any) {
+      // 404 is the expected "not found" response — handle below.
+      if (err?.response?.status !== 404) {
+        console.error('Repair lookup failed', err);
       }
-    }
-
-    // If not found in store, search in mock data for demo purposes
-    if (!result) {
-      result = MOCK_REPAIR_DATA.find((record) => {
-        if (searchType === 'ticket') {
-          return record.ticketId.toLowerCase() === searchQuery.toLowerCase().replace('#', '');
-        } else {
-          return record.customerPhone.includes(searchQuery.replace(/\D/g, ''));
-        }
-      }) || null;
     }
 
     setHasSearched(true);

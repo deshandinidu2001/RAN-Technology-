@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
-import { prisma } from '../server';
+import { supabase } from '../lib/supabase';
 import { generateToken } from '../utils/jwt';
 
 /**
@@ -11,41 +11,36 @@ export const register = async (req: Request, res: Response): Promise<void> => {
   try {
     const { email, password, name } = req.body;
 
-    // Validate input
     if (!email || !password || !name) {
       res.status(400).json({ error: 'Email, password, and name are required' });
       return;
     }
 
-    // Check if user already exists
-    const existingUser = await prisma.user.findUnique({
-      where: { email },
-    });
+    const { data: existingUser } = await supabase
+      .from('User')
+      .select('id')
+      .eq('email', email)
+      .maybeSingle();
 
     if (existingUser) {
       res.status(400).json({ error: 'User with this email already exists' });
       return;
     }
 
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create user
-    const user = await prisma.user.create({
-      data: {
-        email,
-        password: hashedPassword,
-        name,
-      },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        createdAt: true,
-      },
-    });
+    const { data: user, error } = await supabase
+      .from('User')
+      .insert({ email, password: hashedPassword, name })
+      .select('id, email, name, createdAt')
+      .single();
 
-    // Generate token
+    if (error || !user) {
+      console.error('Register insert error:', error);
+      res.status(500).json({ error: 'Failed to register user' });
+      return;
+    }
+
     const token = generateToken({ userId: user.id, email: user.email });
 
     res.status(201).json({
@@ -67,23 +62,22 @@ export const login = async (req: Request, res: Response): Promise<void> => {
   try {
     const { email, password } = req.body;
 
-    // Validate input
     if (!email || !password) {
       res.status(400).json({ error: 'Email and password are required' });
       return;
     }
 
-    // Find user
-    const user = await prisma.user.findUnique({
-      where: { email },
-    });
+    const { data: user } = await supabase
+      .from('User')
+      .select('id, email, name, password, createdAt')
+      .eq('email', email)
+      .maybeSingle();
 
     if (!user) {
       res.status(401).json({ error: 'Invalid email or password' });
       return;
     }
 
-    // Verify password
     const isValidPassword = await bcrypt.compare(password, user.password);
 
     if (!isValidPassword) {
@@ -91,7 +85,6 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Generate token
     const token = generateToken({ userId: user.id, email: user.email });
 
     res.json({
@@ -111,7 +104,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 };
 
 /**
- * Get current user profile
+ * Get current user profile (with orders + items + products)
  * GET /api/auth/me
  */
 export const getMe = async (req: Request, res: Response): Promise<void> => {
@@ -121,34 +114,37 @@ export const getMe = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: req.user.userId },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        createdAt: true,
-        orders: {
-          include: {
-            items: {
-              include: {
-                product: true,
-              },
-            },
-          },
-          orderBy: {
-            createdAt: 'desc',
-          },
-        },
-      },
-    });
+    const { data: user, error } = await supabase
+      .from('User')
+      .select(
+        `id, email, name, createdAt,
+         orders:Order(*, items:OrderItem(*, product:Product(*)))`
+      )
+      .eq('id', req.user.userId)
+      .maybeSingle();
+
+    if (error) {
+      console.error('Get me query error:', error);
+      res.status(500).json({ error: 'Failed to get user profile' });
+      return;
+    }
 
     if (!user) {
       res.status(404).json({ error: 'User not found' });
       return;
     }
 
-    res.json({ user });
+    // Sort orders newest-first to preserve previous behaviour.
+    const ordered = {
+      ...user,
+      orders: Array.isArray((user as any).orders)
+        ? [...(user as any).orders].sort(
+            (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          )
+        : [],
+    };
+
+    res.json({ user: ordered });
   } catch (error) {
     console.error('Get me error:', error);
     res.status(500).json({ error: 'Failed to get user profile' });
@@ -168,14 +164,13 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
 
     const { name, email } = req.body;
 
-    // Check if email is already taken by another user
     if (email) {
-      const existingUser = await prisma.user.findFirst({
-        where: {
-          email,
-          NOT: { id: req.user.userId },
-        },
-      });
+      const { data: existingUser } = await supabase
+        .from('User')
+        .select('id')
+        .eq('email', email)
+        .neq('id', req.user.userId)
+        .maybeSingle();
 
       if (existingUser) {
         res.status(400).json({ error: 'Email is already taken' });
@@ -183,24 +178,24 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
       }
     }
 
-    const user = await prisma.user.update({
-      where: { id: req.user.userId },
-      data: {
-        ...(name && { name }),
-        ...(email && { email }),
-      },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        createdAt: true,
-      },
-    });
+    const updates: Record<string, unknown> = {};
+    if (name) updates.name = name;
+    if (email) updates.email = email;
 
-    res.json({
-      message: 'Profile updated successfully',
-      user,
-    });
+    const { data: user, error } = await supabase
+      .from('User')
+      .update(updates)
+      .eq('id', req.user.userId)
+      .select('id, email, name, createdAt')
+      .single();
+
+    if (error || !user) {
+      console.error('Update profile error:', error);
+      res.status(500).json({ error: 'Failed to update profile' });
+      return;
+    }
+
+    res.json({ message: 'Profile updated successfully', user });
   } catch (error) {
     console.error('Update profile error:', error);
     res.status(500).json({ error: 'Failed to update profile' });
@@ -225,17 +220,17 @@ export const changePassword = async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    // Get user with password
-    const user = await prisma.user.findUnique({
-      where: { id: req.user.userId },
-    });
+    const { data: user } = await supabase
+      .from('User')
+      .select('id, password')
+      .eq('id', req.user.userId)
+      .maybeSingle();
 
     if (!user) {
       res.status(404).json({ error: 'User not found' });
       return;
     }
 
-    // Verify current password
     const isValidPassword = await bcrypt.compare(currentPassword, user.password);
 
     if (!isValidPassword) {
@@ -243,14 +238,18 @@ export const changePassword = async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    // Hash new password
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-    // Update password
-    await prisma.user.update({
-      where: { id: req.user.userId },
-      data: { password: hashedPassword },
-    });
+    const { error } = await supabase
+      .from('User')
+      .update({ password: hashedPassword })
+      .eq('id', req.user.userId);
+
+    if (error) {
+      console.error('Change password update error:', error);
+      res.status(500).json({ error: 'Failed to change password' });
+      return;
+    }
 
     res.json({ message: 'Password changed successfully' });
   } catch (error) {

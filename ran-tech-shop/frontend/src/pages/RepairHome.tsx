@@ -352,6 +352,7 @@ const RepairHome = () => {
       <ServicesSection navigate={navigate} services={services} />
       <ProcessSection />
       <UpgradesSection upgrades={upgrades} />
+      <CustomBuildSection navigate={navigate} />
       <ReviewsSection reviews={reviews} reviewsLoading={reviewsLoading} showReviewForm={showReviewForm}
         setShowReviewForm={setShowReviewForm} newReview={newReview} setNewReview={setNewReview}
         handleAddReview={handleAddReview} submitLoading={submitLoading}
@@ -535,11 +536,7 @@ const ServicesSection = ({ navigate, services }: { navigate: (path: string) => v
   const iconMap: Record<string, typeof Laptop> = { Laptop, Monitor, Smartphone, KeyboardIcon, Wrench, PcCase };
 
   return (
-    <section className="py-32 bg-black relative overflow-hidden">
-      {/* Soft ambient glow */}
-      <div className="absolute top-1/3 left-1/4 w-[500px] h-[500px] bg-white/[0.02] rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-primary/[0.04] rounded-full blur-[100px] pointer-events-none" />
-
+    <section className="py-32 bg-white relative overflow-hidden">
       <div className="container mx-auto px-4 lg:px-6 relative">
         {/* Header */}
         <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
@@ -547,15 +544,15 @@ const ServicesSection = ({ navigate, services }: { navigate: (path: string) => v
         >
           <div>
             <div className="flex items-center gap-4 mb-6">
-              <div className="h-px w-12 bg-white/20" />
-              <span className="text-xs font-mono tracking-[0.3em] text-white/40 uppercase">Services</span>
+              <div className="h-px w-12 bg-black/20" />
+              <span className="text-xs font-mono tracking-[0.3em] text-black/40 uppercase">Services</span>
             </div>
-            <h2 className="text-5xl md:text-7xl font-light text-white tracking-tight">
+            <h2 className="text-5xl md:text-7xl font-light text-black tracking-tight">
               <RevealText>What We Repair</RevealText>
             </h2>
           </div>
           <motion.p initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ delay: 0.3 }}
-            className="text-sm text-white/40 max-w-xs leading-relaxed"
+            className="text-sm text-black/40 max-w-xs leading-relaxed"
           >
             Premium parts. Certified hands. Every repair is diagnosed, documented, and warrantied.
           </motion.p>
@@ -576,7 +573,7 @@ const ServicesSection = ({ navigate, services }: { navigate: (path: string) => v
                 transition={{ delay: index * 0.08, duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
                 onClick={() => navigate('/repair')}
                 whileHover="hover"
-                className="group relative aspect-[4/5] cursor-pointer overflow-hidden bg-black border border-white/10 hover:border-white/30 transition-colors duration-500"
+                className="group relative aspect-[4/5] cursor-pointer overflow-hidden bg-white border border-black/10 hover:border-black/30 transition-colors duration-500"
               >
                 {/* Full-bleed image */}
                 <motion.div
@@ -586,42 +583,42 @@ const ServicesSection = ({ navigate, services }: { navigate: (path: string) => v
                   transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
                 />
 
-                {/* Image dimming + gradient */}
-                <div className="absolute inset-0 bg-black/55 group-hover:bg-black/35 transition-colors duration-700" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent" />
+                {/* White overlay + gradient */}
+                <div className="absolute inset-0 bg-white/15 group-hover:bg-white/5 transition-colors duration-700" />
+                <div className="absolute inset-0 bg-gradient-to-t from-white/95 via-white/30 to-transparent" />
 
                 {/* Animated accent corner */}
                 <motion.div
-                  className="absolute top-5 left-5 w-8 h-8 border-l border-t border-white/0 group-hover:border-white/60 transition-colors duration-500"
+                  className="absolute top-5 left-5 w-8 h-8 border-l border-t border-black/0 group-hover:border-black/50 transition-colors duration-500"
                   variants={{ hover: { width: 48, height: 48 } }}
                   transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
                 />
                 <motion.div
-                  className="absolute bottom-5 right-5 w-8 h-8 border-r border-b border-white/0 group-hover:border-white/60 transition-colors duration-500"
+                  className="absolute bottom-5 right-5 w-8 h-8 border-r border-b border-black/0 group-hover:border-black/50 transition-colors duration-500"
                   variants={{ hover: { width: 48, height: 48 } }}
                   transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
                 />
 
                 {/* Index badge */}
                 <div className="absolute top-6 right-6 z-10">
-                  <span className="text-[10px] font-mono text-white/40 tracking-[0.3em]">
+                  <span className="text-[10px] font-mono text-black/40 tracking-[0.3em]">
                     {String(index + 1).padStart(2, '0')} / {String(services.length).padStart(2, '0')}
                   </span>
                 </div>
 
                 {/* Icon. animated up on hover */}
                 <motion.div
-                  className="absolute top-6 left-6 z-10 w-12 h-12 flex items-center justify-center border border-white/20 backdrop-blur-sm bg-black/40"
-                  variants={{ hover: { y: -4, borderColor: 'rgba(255,255,255,0.6)' } }}
+                  className="absolute top-6 left-6 z-10 w-12 h-12 flex items-center justify-center border border-black/20 backdrop-blur-sm bg-white/60"
+                  variants={{ hover: { y: -4, borderColor: 'rgba(0,0,0,0.5)' } }}
                   transition={{ duration: 0.4 }}
                 >
-                  <IconComponent className="w-5 h-5 text-white" />
+                  <IconComponent className="w-5 h-5 text-black" />
                 </motion.div>
 
                 {/* Content overlay */}
                 <div className="absolute inset-x-0 bottom-0 p-7 z-10">
                   <motion.h3
-                    className="text-2xl md:text-3xl font-light text-white tracking-tight mb-3 leading-tight"
+                    className="text-2xl md:text-3xl font-light text-black tracking-tight mb-3 leading-tight"
                     variants={{ hover: { y: -6 } }}
                     transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
                   >
@@ -630,18 +627,18 @@ const ServicesSection = ({ navigate, services }: { navigate: (path: string) => v
 
                   {/* Description. slides up on hover */}
                   <motion.p
-                    className="text-xs text-white/60 leading-relaxed mb-4 line-clamp-2"
+                    className="text-xs text-black/60 leading-relaxed mb-4 line-clamp-2"
                     initial={{ opacity: 0.7 }}
                     variants={{ hover: { opacity: 1 } }}
                   >
                     {service.description}
                   </motion.p>
 
-                  <div className="flex items-center justify-between pt-4 border-t border-white/15">
-                    <span className="text-xs font-mono text-white/80 tracking-wider">{service.price}</span>
+                  <div className="flex items-center justify-between pt-4 border-t border-black/15">
+                    <span className="text-xs font-mono text-black/70 tracking-wider">{service.price}</span>
                     <motion.div
-                      className="flex items-center gap-2 text-xs text-white/70 font-mono uppercase tracking-wider"
-                      variants={{ hover: { x: 4, color: '#ffffff' } }}
+                      className="flex items-center gap-2 text-xs text-black/60 font-mono uppercase tracking-wider"
+                      variants={{ hover: { x: 4, color: '#000000' } }}
                       transition={{ duration: 0.4 }}
                     >
                       <span>Book</span>
@@ -652,7 +649,7 @@ const ServicesSection = ({ navigate, services }: { navigate: (path: string) => v
 
                 {/* Bottom accent bar that fills on hover */}
                 <motion.div
-                  className="absolute bottom-0 left-0 h-[2px] bg-white origin-left"
+                  className="absolute bottom-0 left-0 h-[2px] bg-black origin-left"
                   initial={{ scaleX: 0, width: '100%' }}
                   variants={{ hover: { scaleX: 1 } }}
                   transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
@@ -672,9 +669,9 @@ const ServicesSection = ({ navigate, services }: { navigate: (path: string) => v
         >
           <button
             onClick={() => navigate('/repair')}
-            className="group inline-flex items-center gap-3 text-xs font-mono uppercase tracking-[0.3em] text-white/60 hover:text-white transition-colors duration-300"
+            className="group inline-flex items-center gap-3 text-xs font-mono uppercase tracking-[0.3em] text-black/60 hover:text-black transition-colors duration-300"
           >
-            <span className="h-px w-10 bg-white/30 group-hover:w-16 group-hover:bg-white transition-all duration-500" />
+            <span className="h-px w-10 bg-black/30 group-hover:w-16 group-hover:bg-black transition-all duration-500" />
             Book Any Repair
             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
           </button>
@@ -733,13 +730,13 @@ const ProcessSection = () => {
   }, [progress]);
 
   return (
-    <section ref={ref} className="relative bg-white">
-      <div ref={pinRef} className="relative min-h-screen bg-white overflow-hidden flex items-center py-20 md:py-24">
+    <section ref={ref} className="relative bg-black">
+      <div ref={pinRef} className="relative min-h-screen bg-black overflow-hidden flex items-center py-20 md:py-24">
         <div
           className="absolute inset-0 opacity-60"
           style={{
             backgroundImage:
-              'radial-gradient(circle, rgba(0,0,0,0.045) 1px, transparent 1px)',
+              'radial-gradient(circle, rgba(255,255,255,0.045) 1px, transparent 1px)',
             backgroundSize: '28px 28px',
           }}
         />
@@ -753,23 +750,23 @@ const ProcessSection = () => {
           className="mb-10 md:mb-12"
         >
           <div className="flex items-center gap-4 mb-6">
-            <div className="h-px w-12 bg-black/25" />
-            <span className="text-xs font-mono tracking-[0.32em] text-black/45 uppercase">Repair Process</span>
+            <div className="h-px w-12 bg-white/25" />
+            <span className="text-xs font-mono tracking-[0.32em] text-white/45 uppercase">Repair Process</span>
           </div>
           <div className="grid lg:grid-cols-12 gap-8 lg:gap-14 items-end">
-            <h2 className="lg:col-span-6 text-5xl md:text-7xl font-light text-black tracking-tight leading-[0.95]">
+            <h2 className="lg:col-span-6 text-5xl md:text-7xl font-light text-white tracking-tight leading-[0.95]">
               <RevealText>How It Works</RevealText>
             </h2>
-            <p className="lg:col-span-4 text-sm md:text-base text-black/50 leading-relaxed max-w-xl">
+            <p className="lg:col-span-4 text-sm md:text-base text-white/50 leading-relaxed max-w-xl">
               A clear four-step repair flow, from booking to pickup, designed to keep your device moving without confusion.
             </p>
           </div>
         </motion.div>
 
         <div className="relative">
-          <div className="absolute top-10 left-0 right-0 h-px bg-black/10 hidden lg:block" />
+          <div className="absolute top-10 left-0 right-0 h-px bg-white/10 hidden lg:block" />
           <motion.div
-            className="absolute top-10 left-0 right-0 h-px bg-black hidden lg:block origin-left"
+            className="absolute top-10 left-0 right-0 h-px bg-white hidden lg:block origin-left"
             style={{ scaleX: lineProgress }}
           />
 
@@ -794,21 +791,21 @@ const ProcessSection = () => {
                   <motion.div
                     whileHover={{ y: -6 }}
                     animate={{
-                      backgroundColor: isActive ? '#000000' : '#ffffff',
-                      borderColor: isActive || isPassed ? 'rgba(0,0,0,0.85)' : 'rgba(0,0,0,0.10)',
-                      color: isActive ? '#ffffff' : '#000000',
+                      backgroundColor: isActive ? '#ffffff' : '#111111',
+                      borderColor: isActive || isPassed ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.10)',
+                      color: isActive ? '#000000' : '#ffffff',
                     }}
                     transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
                     className={`group h-full min-h-[260px] border p-7 md:p-8 transition-colors duration-500 ${
                       isActive
-                        ? 'shadow-[0_24px_70px_rgba(0,0,0,0.16)]'
-                        : 'hover:border-black/35'
+                        ? 'shadow-[0_24px_70px_rgba(255,255,255,0.08)]'
+                        : 'hover:border-white/35'
                     }`}
                   >
                     <div className="flex items-start mb-12">
                       <div
                         className={`h-16 w-16 flex items-center justify-center border font-mono text-2xl font-light ${
-                          isActive ? 'border-white/20 text-white' : isPassed ? 'border-black/35 text-black' : 'border-black/15 text-black/55'
+                          isActive ? 'border-black/20 text-black' : isPassed ? 'border-white/35 text-white' : 'border-white/15 text-white/55'
                         }`}
                       >
                         {step.step}
@@ -817,7 +814,7 @@ const ProcessSection = () => {
 
                     <p
                       className={`text-[10px] font-mono tracking-[0.26em] uppercase mb-4 ${
-                        isActive ? 'text-white/45' : isPassed ? 'text-black/45' : 'text-black/35'
+                        isActive ? 'text-black/45' : isPassed ? 'text-white/45' : 'text-white/35'
                       }`}
                     >
                       {isActive ? 'Active Step' : isPassed ? 'Completed' : `Step ${step.step}`}
@@ -825,7 +822,7 @@ const ProcessSection = () => {
                     <h3 className="text-2xl md:text-3xl font-medium tracking-tight mb-4">
                       {step.title}
                     </h3>
-                    <p className={`text-sm leading-relaxed ${isActive ? 'text-white/58' : 'text-black/52'}`}>
+                    <p className={`text-sm leading-relaxed ${isActive ? 'text-black/58' : 'text-white/52'}`}>
                       {step.desc}
                     </p>
                   </motion.div>
@@ -835,9 +832,9 @@ const ProcessSection = () => {
             })}
           </div>
 
-          <div className="mt-12 h-px bg-black/10 overflow-hidden">
+          <div className="mt-12 h-px bg-white/10 overflow-hidden">
             <motion.div
-              className="h-full bg-black origin-left"
+              className="h-full bg-white origin-left"
               style={{ scaleX: lineProgress }}
             />
           </div>
@@ -850,22 +847,22 @@ const ProcessSection = () => {
 
 /* ─── Upgrades Section ───────────────────────────────────────── */
 const UpgradesSection = ({ upgrades }: { upgrades: UpgradeItem[] }) => (
-  <section className="py-32 bg-black">
+  <section className="py-32 bg-white">
     <div className="container mx-auto px-4 lg:px-6">
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
         className="mb-20"
       >
         <div className="flex items-center gap-4 mb-6">
-          <div className="h-px w-12 bg-white/20" />
-          <span className="text-xs font-mono tracking-[0.3em] text-white/40 uppercase">Upgrades</span>
+          <div className="h-px w-12 bg-black/20" />
+          <span className="text-xs font-mono tracking-[0.3em] text-black/40 uppercase">Upgrades</span>
         </div>
-        <h2 className="text-5xl md:text-7xl font-light text-white tracking-tight">
+        <h2 className="text-5xl md:text-7xl font-light text-black tracking-tight">
           <RevealText>Upgrade Your Device</RevealText>
         </h2>
         <motion.p initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }}
           transition={{ delay: 0.3 }}
-          className="text-sm text-white/40 mt-6 max-w-lg"
+          className="text-sm text-black/40 mt-6 max-w-lg"
         >
           Enhance your device's performance with our professional upgrade services.
         </motion.p>
@@ -878,31 +875,31 @@ const UpgradesSection = ({ upgrades }: { upgrades: UpgradeItem[] }) => (
             initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }} transition={{ delay: i * 0.1, duration: 0.7 }}
             whileHover="hovered"
-            className="group relative bg-white/[0.02] border border-white/5 hover:border-white/20 p-10 transition-all duration-700 cursor-pointer overflow-hidden"
+            className="group relative bg-black/[0.02] border border-black/5 hover:border-black/20 p-10 transition-all duration-700 cursor-pointer overflow-hidden"
           >
             {/* Hover fill */}
-            <motion.div className="absolute inset-0 bg-white/[0.03]"
+            <motion.div className="absolute inset-0 bg-black/[0.03]"
               initial={{ y: '100%' }}
               variants={{ hovered: { y: '0%' } }}
               transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
             />
 
             <div className="relative z-10">
-              <motion.div className="text-5xl mb-6"
+              <motion.div className="text-5xl mb-6 text-black"
                 variants={{ hovered: { scale: 1.2, rotate: 5 } }}
                 transition={{ type: 'spring', stiffness: 300 }}
               >
                 {upgrade.icon}
               </motion.div>
 
-              <h3 className="text-lg font-medium text-white mb-3 tracking-tight">{upgrade.title}</h3>
-              <p className="text-xs text-white/40 mb-6 leading-relaxed">{upgrade.description}</p>
+              <h3 className="text-lg font-medium text-black mb-3 tracking-tight">{upgrade.title}</h3>
+              <p className="text-xs text-black/40 mb-6 leading-relaxed">{upgrade.description}</p>
 
               {/* Price → Learn more slide */}
               <div className="h-6 overflow-hidden">
                 <div className="group-hover:-translate-y-6 transition-transform duration-300">
-                  <div className="text-sm font-mono text-white/60 h-6">{upgrade.price}</div>
-                  <div className="text-sm font-mono text-white h-6 flex items-center gap-2">
+                  <div className="text-sm font-mono text-black/60 h-6">{upgrade.price}</div>
+                  <div className="text-sm font-mono text-black h-6 flex items-center gap-2">
                     Learn more <ArrowRight className="w-3 h-3" />
                   </div>
                 </div>
@@ -914,6 +911,138 @@ const UpgradesSection = ({ upgrades }: { upgrades: UpgradeItem[] }) => (
     </div>
   </section>
 );
+
+/* ─── Custom Build Section (white) ───────────────────────────── */
+const CustomBuildSection = ({ navigate }: { navigate: (path: string) => void }) => {
+  const buildSteps = [
+    { num: '01', label: 'Choose Components', desc: 'Pick CPU, GPU, RAM, storage and case from our curated catalog.' },
+    { num: '02', label: 'Free Assembly', desc: 'Certified technicians cable-manage and assemble your build.' },
+    { num: '03', label: '72h Stress Tested', desc: 'Every PC ships only after a full thermal & stability run.' },
+  ];
+
+  const sectionRef = useRef<HTMLElement>(null);
+  const { scrollYProgress } = useScroll({ target: sectionRef, offset: ['start end', 'end start'] });
+  // Parallax: title drifts up, grid drifts opposite, badge bar slides
+  const titleY = useTransform(scrollYProgress, [0, 1], [60, -60]);
+  const gridY = useTransform(scrollYProgress, [0, 1], [-40, 40]);
+  const badgeX = useTransform(scrollYProgress, [0, 1], ['-12%', '12%']);
+  const stepsY = useTransform(scrollYProgress, [0, 1], [40, -40]);
+
+  return (
+    <section ref={sectionRef} className="relative py-32 bg-black overflow-hidden border-y border-white/5">
+      {/* Parallax grid background */}
+      <motion.div style={{ y: gridY }} className="absolute inset-0 opacity-[0.05] pointer-events-none"
+        aria-hidden
+      >
+        <div className="absolute inset-0"
+          style={{
+            backgroundImage: 'linear-gradient(rgba(255,255,255,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.6) 1px, transparent 1px)',
+            backgroundSize: '64px 64px',
+          }}
+        />
+      </motion.div>
+
+      {/* Floating accent words drifting horizontally */}
+      <motion.div style={{ x: badgeX }} aria-hidden
+        className="absolute -top-4 left-0 right-0 whitespace-nowrap text-[120px] md:text-[200px] font-black tracking-tighter text-white/[0.03] select-none pointer-events-none leading-none"
+      >
+        BUILD · ASSEMBLE · STRESS-TEST · BUILD · ASSEMBLE
+      </motion.div>
+
+      <div className="container mx-auto px-4 lg:px-6 relative">
+        <div className="grid lg:grid-cols-12 gap-12 lg:gap-16 items-start">
+          {/* Left — copy */}
+          <motion.div style={{ y: titleY }} className="lg:col-span-6">
+            <motion.div initial={{ opacity: 0, x: -20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+              className="flex items-center gap-4 mb-6"
+            >
+              <motion.div className="h-px bg-white/20"
+                initial={{ width: 0 }} whileInView={{ width: 48 }} viewport={{ once: true }}
+                transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+              />
+              <span className="text-xs font-mono tracking-[0.3em] text-white/40 uppercase">Custom Build</span>
+            </motion.div>
+
+            <h2 className="text-5xl md:text-7xl font-light text-white tracking-tight">
+              <RevealText>Build Your</RevealText>
+            </h2>
+            <h2 className="text-5xl md:text-7xl font-light text-white/25 tracking-tight">
+              <RevealText delay={0.25}>Dream PC</RevealText>
+            </h2>
+
+            <motion.p initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+              transition={{ delay: 0.5, duration: 0.7 }}
+              className="text-sm text-white/50 mt-8 max-w-md leading-relaxed"
+            >
+              Configure a workstation, gaming rig, or content-creation beast — component by component.
+              We handle assembly, cable management, and 72-hour stress testing so it arrives ready to run.
+            </motion.p>
+
+            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+              transition={{ delay: 0.6 }}
+              className="flex flex-col sm:flex-row gap-3 mt-10"
+            >
+              <motion.button onClick={() => navigate('/pc-build')}
+                whileHover={{ y: -2 }} whileTap={{ scale: 0.98 }}
+                className="group inline-flex items-center justify-center gap-3 px-8 py-4 bg-white text-black text-sm font-medium hover:bg-white/85 transition-colors"
+              >
+                Start Building
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </motion.button>
+              <motion.button onClick={() => navigate('/repair-contact')}
+                whileHover={{ y: -2 }} whileTap={{ scale: 0.98 }}
+                className="inline-flex items-center justify-center gap-3 px-8 py-4 border border-white/15 text-white text-sm font-medium hover:bg-white/[0.06] transition-colors"
+              >
+                Talk to a Specialist
+              </motion.button>
+            </motion.div>
+
+            <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }}
+              transition={{ delay: 0.8, duration: 0.7 }}
+              className="flex items-center gap-6 mt-10 text-[10px] tracking-[0.25em] uppercase text-white/40"
+            >
+              <span>Free Assembly</span>
+              <span className="w-1 h-1 bg-white/30 rotate-45" />
+              <span>2-Year Warranty</span>
+              <span className="w-1 h-1 bg-white/30 rotate-45" />
+              <span>Stress Tested</span>
+            </motion.div>
+          </motion.div>
+
+          {/* Right — process steps with stagger + parallax */}
+          <motion.div style={{ y: stepsY }} className="lg:col-span-6 space-y-px bg-white/[0.06]">
+            {buildSteps.map((s, i) => (
+              <motion.div key={s.num}
+                initial={{ opacity: 0, x: 40, filter: 'blur(8px)' }}
+                whileInView={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
+                viewport={{ once: true, margin: '-80px' }}
+                transition={{ delay: 0.2 + i * 0.12, duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+                whileHover={{ x: -4 }}
+                className="group relative bg-white/[0.04] p-8 md:p-10 hover:bg-white/[0.08] transition-colors duration-500 cursor-pointer"
+              >
+                <div className="flex items-start gap-6">
+                  <span className="text-xs font-mono text-white/30 tracking-[0.3em] mt-1.5">{s.num}</span>
+                  <div className="flex-1">
+                    <h3 className="text-xl md:text-2xl font-light text-white tracking-tight mb-2">{s.label}</h3>
+                    <p className="text-xs text-white/50 leading-relaxed max-w-md">{s.desc}</p>
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-white/20 group-hover:text-white/70 group-hover:translate-x-1 transition-all" />
+                </div>
+                {/* Hover progress underline */}
+                <motion.div className="absolute left-0 bottom-0 h-px bg-white origin-left"
+                  initial={{ scaleX: 0 }} whileHover={{ scaleX: 1 }}
+                  transition={{ duration: 0.4 }}
+                  style={{ width: '100%' }}
+                />
+              </motion.div>
+            ))}
+          </motion.div>
+        </div>
+      </div>
+    </section>
+  );
+};
 
 /* ─── Reviews Section ────────────────────────────────────────── */
 const ReviewsSection = ({

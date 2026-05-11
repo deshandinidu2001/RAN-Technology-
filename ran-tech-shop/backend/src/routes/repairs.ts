@@ -7,6 +7,7 @@ import {
   getBookingsByEmail,
   updateBookingStatus,
   cancelBooking,
+  deleteBooking,
   setAvailability,
   getStatistics,
   getRepairReviews,
@@ -34,6 +35,7 @@ router.get('/services', getRepairServices);
 // Protected routes (admin only)
 router.get('/admin/bookings', optionalAuth, getAllBookings);
 router.patch('/admin/booking/:id', optionalAuth, updateBookingStatus);
+router.delete('/admin/booking/:id', optionalAuth, deleteBooking);
 router.post('/admin/availability', authenticate, setAvailability);
 router.get('/admin/statistics', optionalAuth, getStatistics);
 
