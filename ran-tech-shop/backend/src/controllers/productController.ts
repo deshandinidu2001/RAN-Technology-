@@ -107,9 +107,16 @@ export const getAllProducts = async (req: Request, res: Response): Promise<void>
         totalPages: Math.ceil(total / limitNum),
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get all products error:', error);
-    res.status(500).json({ error: 'Failed to fetch products' });
+    res.status(500).json({
+      error: 'Failed to fetch products',
+      message: error?.message || String(error),
+      code: error?.code,
+      hint: error?.hint,
+      hasSupabaseUrl: !!process.env.SUPABASE_URL,
+      hasSupabaseKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+    });
   }
 };
 

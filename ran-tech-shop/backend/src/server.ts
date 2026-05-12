@@ -66,6 +66,21 @@ app.get('/api/health', (_req: Request, res: Response) => {
   });
 });
 
+// Diagnostic endpoint — reports which env vars are present (no values exposed).
+app.get('/api/diag', (_req: Request, res: Response) => {
+  res.json({
+    cwd: process.cwd(),
+    nodeEnv: process.env.NODE_ENV,
+    env: {
+      SUPABASE_URL: !!process.env.SUPABASE_URL,
+      SUPABASE_SERVICE_ROLE_KEY: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+      JWT_SECRET: !!process.env.JWT_SECRET,
+      CLOUDINARY_CLOUD_NAME: !!process.env.CLOUDINARY_CLOUD_NAME,
+      FRONTEND_URL: process.env.FRONTEND_URL || null,
+    },
+  });
+});
+
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
