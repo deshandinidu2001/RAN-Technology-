@@ -106,9 +106,26 @@ const ProductDetail: React.FC = () => {
     ? product.images 
     : [product.image];
 
-  // Use specs from database
-  const specs = product.specs || {};
-  const specEntries = Object.entries(specs);
+  // Use specs from database — robust against string/object/non-string values.
+  // Admin's dropdowns save spec:Field=Value pairs into product.specs as
+  // a plain object; older rows may have it as a JSON string.
+  const rawSpecs: any = product.specs ?? {};
+  const specsObject: Record<string, unknown> = (() => {
+    if (!rawSpecs) return {};
+    if (typeof rawSpecs === 'string') {
+      try { return JSON.parse(rawSpecs) || {}; } catch { return {}; }
+    }
+    return rawSpecs;
+  })();
+  const stringifyVal = (v: unknown): string => {
+    if (v == null) return '';
+    if (typeof v === 'string') return v;
+    if (typeof v === 'number' || typeof v === 'boolean') return String(v);
+    return JSON.stringify(v);
+  };
+  const specEntries = Object.entries(specsObject)
+    .map(([k, v]) => [k, stringifyVal(v)] as const)
+    .filter(([, v]) => v.trim().length > 0);
 
   // Add base specs
   const allSpecs = [
@@ -116,7 +133,7 @@ const ProductDetail: React.FC = () => {
     { label: 'Category', value: product.category.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) },
     { label: 'SKU', value: product.sku || `RAN-${product.id.substring(0, 6).toUpperCase()}` },
     { label: 'Availability', value: product.stock > 0 ? 'In Stock' : 'Out of Stock' },
-    ...specEntries.map(([key, value]) => ({ label: key, value: value as string })),
+    ...specEntries.map(([key, value]) => ({ label: key, value })),
   ];
 
   // Use features from database
@@ -545,7 +562,7 @@ const ProductDetail: React.FC = () => {
                     </div>
                   </motion.div>
                 )}
-                @@                
+
                 {reviews.length > 0 ? (
                   <div className="space-y-6">
                     {reviews.map((review) => (

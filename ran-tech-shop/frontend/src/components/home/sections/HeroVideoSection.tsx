@@ -19,10 +19,10 @@ const HeroVideoSection = () => {
 
   return (
     <section className="relative h-screen w-full overflow-hidden bg-[#0A0A0B] select-none">
-      {/* ── Video Background (shifted right) ────────────────── */}
+      {/* ── Video Background — full-screen cover ─────────────── */}
       <div
         className="absolute inset-0 z-0"
-        style={{ transform: `translate(8%, ${scrollY * 0.3}px)` }}
+        style={{ transform: `translateY(${scrollY * 0.25}px)` }}
       >
         <video
           ref={videoRef}
@@ -30,7 +30,7 @@ const HeroVideoSection = () => {
           loop
           playsInline
           autoPlay
-          className="w-full h-full object-cover scale-105"
+          className="w-full h-full object-cover"
         >
           <source src="/videos/shop_intro.mp4" type="video/mp4" />
         </video>
