@@ -61,6 +61,8 @@ type BackendOrder = {
   }>;
 };
 
+type SpecField = { label: string; options: string[] };
+
 type AdminFilterCategory = {
   id?: string;
   slug: string;
@@ -68,6 +70,7 @@ type AdminFilterCategory = {
   parentSlug?: string | null;
   order: number;
   visible: boolean;
+  specFields?: SpecField[];
 };
 
 const DEFAULT_FILTER_CATEGORIES: AdminFilterCategory[] = [
@@ -107,6 +110,38 @@ const FILTER_DETAIL_FIELDS: Record<string, string[]> = {
   smartphones: ['RAM', 'Storage'],
   gaming: ['Platform', 'Type'],
   accessories: ['Type', 'Compatibility'],
+};
+
+// Seeded dropdown options shown when a category's `specFields` is empty.
+// Admins can override these in the Filter Categories → Specification Dropdowns panel.
+const DEFAULT_SPEC_FIELD_OPTIONS: Record<string, SpecField[]> = {
+  laptops: [
+    {
+      label: 'Processor',
+      options: [
+        'Intel Core i3', 'Intel Core i5', 'Intel Core i7', 'Intel Core i9',
+        'AMD Ryzen 3', 'AMD Ryzen 5', 'AMD Ryzen 7', 'AMD Ryzen 9',
+        'Apple M1', 'Apple M2', 'Apple M3', 'Apple M4',
+      ],
+    },
+    { label: 'RAM', options: ['4GB', '8GB', '16GB', '32GB', '64GB'] },
+    {
+      label: 'Storage',
+      options: [
+        '128GB SSD', '256GB SSD', '512GB SSD', '1TB SSD', '2TB SSD',
+        '500GB HDD', '1TB HDD', '2TB HDD',
+      ],
+    },
+  ],
+  ram: [
+    { label: 'Type', options: ['DDR3', 'DDR4', 'DDR5'] },
+    { label: 'Capacity', options: ['4GB', '8GB', '16GB', '32GB', '64GB'] },
+    { label: 'Speed', options: ['2400 MHz', '2666 MHz', '3200 MHz', '3600 MHz', '4800 MHz', '5600 MHz', '6000 MHz'] },
+  ],
+  ssd: [
+    { label: 'Type', options: ['SATA', 'NVMe M.2', 'PCIe Gen4', 'PCIe Gen5'] },
+    { label: 'Capacity', options: ['128GB', '256GB', '512GB', '1TB', '2TB', '4TB'] },
+  ],
 };
 
 const PRODUCT_CATEGORY_PARENT: Record<string, string> = {
@@ -502,7 +537,20 @@ const AdminDashboard: React.FC = () => {
   const subcategoryOptions = productFormCategory
     ? visibleFilterCategories.filter((cat) => cat.parentSlug === productFormCategory)
     : [];
-  const quickSpecFields = FILTER_DETAIL_FIELDS[productFormCategory] || ['Type', 'Compatibility'];
+  // Spec dropdowns: prefer the per-category `specFields` configured by admin
+  // (saved in DB), fall back to seeded defaults, then to a plain-text field list.
+  const categorySpecFields: SpecField[] = (() => {
+    const fromDb = filterCategories.find((c) => c.slug === productFormCategory)?.specFields;
+    if (Array.isArray(fromDb) && fromDb.length > 0) return fromDb;
+    if (DEFAULT_SPEC_FIELD_OPTIONS[productFormCategory]) {
+      return DEFAULT_SPEC_FIELD_OPTIONS[productFormCategory];
+    }
+    const labels = FILTER_DETAIL_FIELDS[productFormCategory] || ['Type', 'Compatibility'];
+    return labels.map((label) => ({ label, options: [] }));
+  })();
+  const hasAnyDropdownOptions = categorySpecFields.some((f) => f.options.length > 0);
+  // Legacy var kept for any downstream reference — derive labels from categorySpecFields.
+  const quickSpecFields = categorySpecFields.map((f) => f.label);
 
   const readSpecs = (product?: Product | null): Record<string, string> => {
     if (!product?.specs) return {};
@@ -1790,34 +1838,71 @@ const AdminDashboard: React.FC = () => {
                       </div>
 
                       <div className="md:col-span-2">
-                        <label className="block text-white/70 text-sm mb-2">Filter Details</label>
+                        <label className="block text-white/70 text-sm mb-2">Specifications</label>
                         <p className="text-xs text-white/40 mb-3">
-                          These values become dropdown filters in the shop sidebar for this category.
+                          Pick from the dropdowns configured for this category. Edit the options
+                          in <span className="text-primary/80">Filter Categories → Specification Dropdowns</span>.
                         </p>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          {quickSpecFields.map((field) => (
-                            <input
-                              key={field}
-                              type="text"
-                              name={`spec:${field}`}
-                              defaultValue={readSpecs(selectedProduct)[field] || ''}
-                              className="w-full px-4 py-3 bg-dark-200/50 border border-white/10 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:border-primary/50"
-                              placeholder={field}
-                            />
-                          ))}
+                          {categorySpecFields.map((field) => {
+                            const currentValue = readSpecs(selectedProduct)[field.label] || '';
+                            const hasOptions = field.options.length > 0;
+                            const valueInList = hasOptions && field.options.includes(currentValue);
+
+                            if (hasOptions) {
+                              return (
+                                <div key={field.label}>
+                                  <label className="block text-white/50 text-xs mb-1.5">{field.label}</label>
+                                  <select
+                                    name={`spec:${field.label}`}
+                                    defaultValue={valueInList ? currentValue : ''}
+                                    className="w-full px-4 py-3 bg-dark-200/50 border border-white/10 rounded-xl text-white focus:outline-none focus:border-primary/50"
+                                  >
+                                    <option value="">Select {field.label}…</option>
+                                    {field.options.map((opt) => (
+                                      <option key={opt} value={opt}>{opt}</option>
+                                    ))}
+                                  </select>
+                                  {currentValue && !valueInList && (
+                                    <p className="text-amber-400/70 text-[10px] mt-1">
+                                      Current value "{currentValue}" not in dropdown — add it in Filter Categories.
+                                    </p>
+                                  )}
+                                </div>
+                              );
+                            }
+
+                            // No options configured for this field — fall back to text input.
+                            return (
+                              <div key={field.label}>
+                                <label className="block text-white/50 text-xs mb-1.5">{field.label}</label>
+                                <input
+                                  type="text"
+                                  name={`spec:${field.label}`}
+                                  defaultValue={currentValue}
+                                  className="w-full px-4 py-3 bg-dark-200/50 border border-white/10 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:border-primary/50"
+                                  placeholder={`Enter ${field.label}`}
+                                />
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
 
-                      <div className="md:col-span-2">
-                        <label className="block text-white/70 text-sm mb-2">Specifications (JSON format)</label>
-                        <textarea
-                          name="specs"
-                          defaultValue={selectedProduct?.specs ? JSON.stringify(selectedProduct.specs, null, 2) : ''}
-                          rows={4}
-                          className="w-full px-4 py-3 bg-dark-200/50 border border-white/10 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:border-primary/50 font-mono text-xs resize-y"
-                          placeholder='{"Processor": "Intel Core i7", "RAM": "16GB DDR5"}'
-                        />
-                      </div>
+                      {/* JSON specs editor — only shown for categories without dropdowns
+                          so advanced/edge-case categories can still set raw specs. */}
+                      {!hasAnyDropdownOptions && (
+                        <div className="md:col-span-2">
+                          <label className="block text-white/70 text-sm mb-2">Specifications (JSON format)</label>
+                          <textarea
+                            name="specs"
+                            defaultValue={selectedProduct?.specs ? JSON.stringify(selectedProduct.specs, null, 2) : ''}
+                            rows={4}
+                            className="w-full px-4 py-3 bg-dark-200/50 border border-white/10 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:border-primary/50 font-mono text-xs resize-y"
+                            placeholder='{"Processor": "Intel Core i7", "RAM": "16GB DDR5"}'
+                          />
+                        </div>
+                      )}
 
                       <div className="md:col-span-2">
                         <label className="block text-white/70 text-sm mb-2">Features (Line separated or JSON Array)</label>
@@ -1977,7 +2062,15 @@ const CompatibleProductsPicker: React.FC<{ allProducts: any[]; initialIds: strin
 /* ─────────────────────────────────────────────────────────── */
 /*  FilterCategoriesAdmin — CRUD for sidebar filter categories */
 /* ─────────────────────────────────────────────────────────── */
-interface FilterCat { id: string; slug: string; name: string; parentSlug?: string | null; order: number; visible: boolean }
+interface FilterCat {
+  id: string;
+  slug: string;
+  name: string;
+  parentSlug?: string | null;
+  order: number;
+  visible: boolean;
+  specFields?: SpecField[];
+}
 
 const FilterCategoriesAdmin: React.FC = () => {
   const [cats, setCats] = useState<FilterCat[]>([]);
@@ -1992,6 +2085,7 @@ const FilterCategoriesAdmin: React.FC = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [editOrder, setEditOrder] = useState<number>(0);
+  const [specsOpenId, setSpecsOpenId] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true); setError(null);
@@ -2066,6 +2160,16 @@ const FilterCategoriesAdmin: React.FC = () => {
       await load();
       showSuccess('Updated.');
     } catch { setError('Failed to update.'); }
+  };
+
+  const saveSpecs = async (cat: FilterCat, specFields: SpecField[]) => {
+    try {
+      await api.patch(`/filter-categories/${cat.id}`, { specFields });
+      await load();
+      showSuccess(`Spec dropdowns saved for ${cat.name}.`);
+    } catch (err: any) {
+      setError(err?.response?.data?.error || 'Failed to save spec fields.');
+    }
   };
 
   // Group into parents and children for display
@@ -2158,6 +2262,16 @@ const FilterCategoriesAdmin: React.FC = () => {
                         <span className="text-white/30 text-xs font-mono ml-2">/{c.slug}</span>
                         <span className="text-white/30 text-xs ml-2">order: {c.order}</span>
                       </div>
+                      <button
+                        onClick={() => setSpecsOpenId(specsOpenId === c.id ? null : c.id)}
+                        className={`px-2.5 py-1 text-xs rounded transition-colors ${
+                          specsOpenId === c.id
+                            ? 'bg-primary text-dark font-semibold'
+                            : 'text-primary/80 hover:text-primary border border-primary/30 hover:border-primary/50'
+                        }`}
+                      >
+                        Specs{(c.specFields?.length ?? 0) > 0 ? ` (${c.specFields!.length})` : ''}
+                      </button>
                       <button onClick={() => startEdit(c)} className="px-2.5 py-1 text-xs text-white/50 hover:text-white border border-white/10 rounded transition-colors">Edit</button>
                       <button onClick={() => toggleVisible(c)}
                         className={`px-2.5 py-1 text-xs rounded transition-colors ${c.visible ? 'bg-primary/20 text-primary hover:bg-primary/30' : 'bg-dark-200 text-white/40 hover:text-white/60'}`}>
@@ -2169,6 +2283,15 @@ const FilterCategoriesAdmin: React.FC = () => {
                     </>
                   )}
                 </div>
+
+                {/* Spec dropdowns editor — expanded under the parent row */}
+                {specsOpenId === c.id && (
+                  <SpecFieldsEditor
+                    cat={c}
+                    onSave={(fields) => saveSpecs(c, fields)}
+                    onClose={() => setSpecsOpenId(null)}
+                  />
+                )}
 
                 {/* Child rows */}
                 {childrenOf(c.slug).map(child => (
@@ -2222,6 +2345,178 @@ const FilterCategoriesAdmin: React.FC = () => {
             ))}
           </div>
         )}
+      </div>
+    </div>
+  );
+};
+
+/* ─────────────────────────────────────────────────────────── */
+/*  SpecFieldsEditor — manage dropdown options for a category   */
+/* ─────────────────────────────────────────────────────────── */
+const SpecFieldsEditor: React.FC<{
+  cat: FilterCat;
+  onSave: (fields: SpecField[]) => Promise<void> | void;
+  onClose: () => void;
+}> = ({ cat, onSave, onClose }) => {
+  // Seed editor from saved value; fall back to defaults if empty
+  const seed: SpecField[] = (() => {
+    if (Array.isArray(cat.specFields) && cat.specFields.length > 0) return cat.specFields;
+    return DEFAULT_SPEC_FIELD_OPTIONS[cat.slug] || [];
+  })();
+  const [fields, setFields] = useState<SpecField[]>(JSON.parse(JSON.stringify(seed)));
+  const [newFieldName, setNewFieldName] = useState('');
+  const [newOption, setNewOption] = useState<Record<number, string>>({});
+  const [saving, setSaving] = useState(false);
+
+  const addField = () => {
+    const label = newFieldName.trim();
+    if (!label) return;
+    if (fields.some((f) => f.label.toLowerCase() === label.toLowerCase())) return;
+    setFields([...fields, { label, options: [] }]);
+    setNewFieldName('');
+  };
+
+  const removeField = (idx: number) => {
+    setFields(fields.filter((_, i) => i !== idx));
+  };
+
+  const addOption = (idx: number) => {
+    const val = (newOption[idx] || '').trim();
+    if (!val) return;
+    const next = [...fields];
+    if (next[idx].options.includes(val)) return;
+    next[idx] = { ...next[idx], options: [...next[idx].options, val] };
+    setFields(next);
+    setNewOption({ ...newOption, [idx]: '' });
+  };
+
+  const removeOption = (fieldIdx: number, opt: string) => {
+    const next = [...fields];
+    next[fieldIdx] = { ...next[fieldIdx], options: next[fieldIdx].options.filter((o) => o !== opt) };
+    setFields(next);
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await onSave(fields);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="ml-3 my-2 p-4 rounded-lg border border-primary/20 bg-primary/[0.04] space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-white text-sm font-semibold">Specification Dropdowns — {cat.name}</p>
+          <p className="text-white/40 text-xs mt-0.5">
+            These dropdowns appear in the Add Product form when this category is selected.
+          </p>
+        </div>
+        <button
+          onClick={onClose}
+          className="text-white/40 hover:text-white text-xs"
+        >
+          Close
+        </button>
+      </div>
+
+      {/* Each spec field */}
+      {fields.length === 0 && (
+        <p className="text-white/40 text-xs italic">No spec dropdowns yet. Add one below.</p>
+      )}
+      {fields.map((field, idx) => (
+        <div key={idx} className="bg-dark-200/40 border border-white/10 rounded-lg p-3">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-white text-sm font-semibold">{field.label}</span>
+            <button
+              onClick={() => removeField(idx)}
+              className="text-red-400 hover:text-red-300 text-xs"
+            >
+              Remove field
+            </button>
+          </div>
+
+          {/* Options as chips */}
+          <div className="flex flex-wrap gap-1.5 mb-2">
+            {field.options.length === 0 && (
+              <span className="text-white/30 text-xs italic">No options yet</span>
+            )}
+            {field.options.map((opt) => (
+              <span
+                key={opt}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white/5 border border-white/10 rounded-full text-white/80 text-xs"
+              >
+                {opt}
+                <button
+                  onClick={() => removeOption(idx, opt)}
+                  className="text-white/40 hover:text-red-400"
+                  aria-label={`Remove ${opt}`}
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+
+          {/* Add option */}
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={newOption[idx] || ''}
+              onChange={(e) => setNewOption({ ...newOption, [idx]: e.target.value })}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') { e.preventDefault(); addOption(idx); }
+              }}
+              placeholder={`Add option for ${field.label}…`}
+              className="flex-1 px-3 py-1.5 bg-dark-200/60 border border-white/10 rounded text-white text-xs focus:outline-none focus:border-primary/50"
+            />
+            <button
+              onClick={() => addOption(idx)}
+              className="px-3 py-1.5 bg-primary/20 text-primary text-xs font-semibold rounded hover:bg-primary/30"
+            >
+              Add
+            </button>
+          </div>
+        </div>
+      ))}
+
+      {/* Add a new field */}
+      <div className="flex gap-2 pt-2 border-t border-white/5">
+        <input
+          type="text"
+          value={newFieldName}
+          onChange={(e) => setNewFieldName(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') { e.preventDefault(); addField(); }
+          }}
+          placeholder="New field name (e.g. Display, GPU)…"
+          className="flex-1 px-3 py-2 bg-dark-200/60 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-primary/50"
+        />
+        <button
+          onClick={addField}
+          className="px-4 py-2 bg-white/10 text-white text-sm rounded-lg hover:bg-white/15"
+        >
+          Add field
+        </button>
+      </div>
+
+      {/* Save bar */}
+      <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/5">
+        <button
+          onClick={onClose}
+          className="px-4 py-2 text-xs text-white/60 hover:text-white"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="px-5 py-2 bg-primary text-dark text-xs font-bold rounded-lg hover:bg-primary/90 disabled:opacity-50"
+        >
+          {saving ? 'Saving…' : 'Save dropdowns'}
+        </button>
       </div>
     </div>
   );

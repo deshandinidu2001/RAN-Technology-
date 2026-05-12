@@ -4,6 +4,25 @@ import { supabase } from '../lib/supabase';
 const slugify = (s: string) =>
   s.toLowerCase().trim().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 
+// Normalize the user-supplied specFields payload into a clean shape we can store.
+// Expected: Array<{ label: string; options: string[] }>
+const normalizeSpecFields = (input: unknown): Array<{ label: string; options: string[] }> | undefined => {
+  if (input === undefined) return undefined;
+  if (!Array.isArray(input)) return [];
+  return input
+    .map((field) => {
+      if (!field || typeof field !== 'object') return null;
+      const label = String((field as any).label ?? '').trim();
+      if (!label) return null;
+      const rawOpts = (field as any).options;
+      const options = Array.isArray(rawOpts)
+        ? rawOpts.map((o) => String(o).trim()).filter(Boolean)
+        : [];
+      return { label, options };
+    })
+    .filter(Boolean) as Array<{ label: string; options: string[] }>;
+};
+
 export const listFilterCategories = async (req: Request, res: Response): Promise<void> => {
   try {
     const { includeHidden } = req.query;
@@ -28,12 +47,13 @@ export const listFilterCategories = async (req: Request, res: Response): Promise
 
 export const createFilterCategory = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { name, slug, parentSlug, order, visible } = req.body || {};
+    const { name, slug, parentSlug, order, visible, specFields } = req.body || {};
     if (!name || typeof name !== 'string') {
       res.status(400).json({ error: 'name is required' });
       return;
     }
     const finalSlug = (slug && typeof slug === 'string' ? slug : slugify(name)) || slugify(name);
+    const normalizedSpecs = normalizeSpecFields(specFields);
 
     const { data, error } = await supabase
       .from('FilterCategory')
@@ -43,6 +63,7 @@ export const createFilterCategory = async (req: Request, res: Response): Promise
         parentSlug: parentSlug ? String(parentSlug) : null,
         order: typeof order === 'number' ? order : 0,
         visible: visible === false ? false : true,
+        ...(normalizedSpecs !== undefined ? { specFields: normalizedSpecs } : {}),
       })
       .select('*')
       .single();
@@ -65,13 +86,17 @@ export const createFilterCategory = async (req: Request, res: Response): Promise
 export const updateFilterCategory = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const { name, slug, parentSlug, order, visible } = req.body || {};
+    const { name, slug, parentSlug, order, visible, specFields } = req.body || {};
     const updates: Record<string, unknown> = {};
     if (name !== undefined) updates.name = String(name);
     if (slug !== undefined) updates.slug = String(slug);
     if (parentSlug !== undefined) updates.parentSlug = parentSlug ? String(parentSlug) : null;
     if (order !== undefined) updates.order = Number(order);
     if (visible !== undefined) updates.visible = !!visible;
+    if (specFields !== undefined) {
+      const normalized = normalizeSpecFields(specFields);
+      if (normalized !== undefined) updates.specFields = normalized;
+    }
 
     const { data, error } = await supabase
       .from('FilterCategory')
