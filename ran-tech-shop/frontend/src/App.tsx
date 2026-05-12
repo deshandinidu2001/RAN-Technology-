@@ -103,6 +103,15 @@ const App: React.FC = () => {
   useEffect(() => {
     if (token) {
       checkAuth();
+    } else {
+      // No auth token on boot → discard any leftover cart from a previous
+      // logged-in session so guests don't see another customer's items
+      // (e.g. cart badge showing "18" when no one is signed in).
+      // The user's saved cart is preserved under `ran-cart-<userId>`
+      // and restored when they sign in again.
+      import('./store/cartStore').then(({ useCartStore }) => {
+        useCartStore.getState().clearCart();
+      });
     }
   }, [checkAuth, token]);
 

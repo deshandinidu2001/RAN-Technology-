@@ -91,7 +91,6 @@ const ShopBot: React.FC = () => {
       addBotMessage(`${greeting}\n\nHow can I help you today?`, [
         { label: 'My Orders', action: 'orders' },
         { label: 'My Repairs', action: 'repairs' },
-        { label: 'Get Price Quote', action: 'products' },
         { label: 'About Us', action: 'about' },
         { label: 'Talk to Human (WhatsApp)', action: 'whatsapp' },
       ]);
@@ -293,7 +292,6 @@ const ShopBot: React.FC = () => {
         addBotMessage('How else can I help you?', [
           { label: '📦 My Orders', action: 'orders' },
           { label: '🔧 My Repairs', action: 'repairs' },
-          { label: '💰 Get Price Quote', action: 'products' },
           { label: 'ℹ️ About Us', action: 'about' },
           { label: '💬 Talk to Human (WhatsApp)', action: 'whatsapp' },
         ]);

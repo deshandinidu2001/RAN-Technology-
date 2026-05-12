@@ -714,7 +714,7 @@ const AdminDashboard: React.FC = () => {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as TabType)}
-              className={`px-4 py-2 rounded-lg font-medium flex items-center gap-2 whitespace-nowrap transition-colors ${
+              className={`px-4 py-2  font-medium flex items-center gap-2 whitespace-nowrap transition-colors ${
                 activeTab === tab.id
                   ? 'bg-primary text-dark'
                   : 'bg-dark-100/50 text-white/70 hover:text-white'
@@ -738,7 +738,7 @@ const AdminDashboard: React.FC = () => {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder={`Search ${activeTab}...`}
-                className="w-full pl-12 pr-4 py-3 bg-dark-100/50 border border-white/10 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:border-primary/50"
+                className="w-full pl-12 pr-4 py-3 bg-dark-100/50 border border-white/10  text-white placeholder:text-white/40 focus:outline-none focus:border-primary/50"
               />
             </div>
           </div>
@@ -756,7 +756,7 @@ const AdminDashboard: React.FC = () => {
                 <motion.div
                   key={repair.ticketId}
                   layout
-                  className="bg-dark-100/50 border border-white/10 rounded-xl p-4 hover:border-primary/30 transition-colors"
+                  className="bg-dark-100/50 border border-white/10  p-4 hover:border-primary/30 transition-colors"
                 >
                   <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                     <div className="flex-1">
@@ -777,7 +777,7 @@ const AdminDashboard: React.FC = () => {
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => setSelectedRepair(repair)}
-                        className="px-3 py-2 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors text-sm"
+                        className="px-3 py-2 bg-primary/10 text-primary  hover:bg-primary/20 transition-colors text-sm"
                       >
                         Edit
                       </button>
@@ -792,7 +792,7 @@ const AdminDashboard: React.FC = () => {
                             alert('Failed to delete repair.');
                           }
                         }}
-                        className="px-3 py-2 bg-red-500/10 text-red-400 rounded-lg hover:bg-red-500/20 transition-colors text-sm"
+                        className="px-3 py-2 bg-red-500/10 text-red-400  hover:bg-red-500/20 transition-colors text-sm"
                       >
                         Delete
                       </button>
@@ -806,7 +806,7 @@ const AdminDashboard: React.FC = () => {
                         <button
                           key={idx}
                           onClick={() => handleRepairStageUpdate(repair.ticketId, idx)}
-                          className={`px-3 py-1.5 rounded-lg text-xs transition-colors ${
+                          className={`px-3 py-1.5  text-xs transition-colors ${
                             repair.currentStage === idx
                               ? 'bg-primary text-dark font-medium'
                               : 'bg-dark-200/50 text-white/60 hover:text-white'
@@ -849,7 +849,7 @@ const AdminDashboard: React.FC = () => {
                 <motion.div
                   key={repair.ticketId}
                   layout
-                  className="bg-dark-100/50 border border-blue-500/20 rounded-xl p-4"
+                  className="bg-dark-100/50 border border-blue-500/20  p-4"
                 >
                   <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                     <div className="flex-1">
@@ -892,7 +892,7 @@ const AdminDashboard: React.FC = () => {
                 <motion.div
                   key={order.id}
                   layout
-                  className="bg-dark-100/50 border border-white/10 rounded-xl p-4 hover:border-primary/30 transition-colors"
+                  className="bg-dark-100/50 border border-white/10  p-4 hover:border-primary/30 transition-colors"
                 >
                   <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                     <div className="flex-1">
@@ -914,7 +914,7 @@ const AdminDashboard: React.FC = () => {
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => setSelectedOrder(order)}
-                        className="px-3 py-2 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors text-sm"
+                        className="px-3 py-2 bg-primary/10 text-primary  hover:bg-primary/20 transition-colors text-sm"
                       >
                         View
                       </button>
@@ -929,7 +929,7 @@ const AdminDashboard: React.FC = () => {
                             alert('Failed to delete order.');
                           }
                         }}
-                        className="px-3 py-2 bg-red-500/10 text-red-400 rounded-lg hover:bg-red-500/20 transition-colors text-sm"
+                        className="px-3 py-2 bg-red-500/10 text-red-400  hover:bg-red-500/20 transition-colors text-sm"
                       >
                         Delete
                       </button>
@@ -943,7 +943,7 @@ const AdminDashboard: React.FC = () => {
                         <button
                           key={status}
                           onClick={() => handleOrderStatusChange(order.id, status)}
-                          className={`px-3 py-1.5 rounded-lg text-xs transition-colors ${
+                          className={`px-3 py-1.5  text-xs transition-colors ${
                             order.status === status
                               ? 'bg-primary text-dark font-medium'
                               : 'bg-dark-200/50 text-white/60 hover:text-white'
@@ -985,7 +985,7 @@ const AdminDashboard: React.FC = () => {
                   setProductFormCategory('');
                   setShowProductForm(true);
                 }}
-                className="px-6 py-3 bg-primary text-dark rounded-xl font-semibold hover:bg-primary/90 transition-colors flex items-center gap-2"
+                className="px-6 py-3 bg-primary text-dark  font-semibold hover:bg-primary/90 transition-colors flex items-center gap-2"
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -1005,11 +1005,11 @@ const AdminDashboard: React.FC = () => {
                   <motion.div
                     key={product.id}
                     layout
-                    className="bg-dark-100/50 border border-white/10 rounded-xl p-4 hover:border-primary/30 transition-colors"
+                    className="bg-dark-100/50 border border-white/10  p-4 hover:border-primary/30 transition-colors"
                   >
                     {/* Product Image */}
                     {product.image && (
-                      <div className="aspect-square rounded-lg overflow-hidden mb-3 bg-dark-200/50">
+                      <div className="aspect-square  overflow-hidden mb-3 bg-dark-200/50">
                         <img 
                           src={product.image} 
                           alt={product.name}
@@ -1059,7 +1059,7 @@ const AdminDashboard: React.FC = () => {
                           <button
                             onClick={() => handleToggleFeatured(product)}
                             title={(product as any).featured ? 'Unmark as featured (hide from home showcase)' : 'Mark as featured (show in home showcase)'}
-                            className={`p-2 rounded-lg transition-colors ${
+                            className={`p-2  transition-colors ${
                               (product as any).featured
                                 ? 'bg-amber-400/20 text-amber-400 hover:bg-amber-400/30'
                                 : 'bg-white/5 text-white/40 hover:bg-white/10 hover:text-amber-300'
@@ -1076,7 +1076,7 @@ const AdminDashboard: React.FC = () => {
                                 setProductFormCategory(categoryForForm(product));
                                 setShowProductForm(true);
                               }}
-                            className="p-2 bg-blue-500/20 text-blue-400 rounded-lg hover:bg-blue-500/30 transition-colors"
+                            className="p-2 bg-blue-500/20 text-blue-400  hover:bg-blue-500/30 transition-colors"
                           >
                             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -1084,7 +1084,7 @@ const AdminDashboard: React.FC = () => {
                           </button>
                           <button
                             onClick={() => handleDeleteProduct(product)}
-                            className="p-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors"
+                            className="p-2 bg-red-500/20 text-red-400  hover:bg-red-500/30 transition-colors"
                           >
                             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -1127,7 +1127,7 @@ const AdminDashboard: React.FC = () => {
                   setProductFormCategory('services');
                   setShowProductForm(true);
                 }}
-                className="px-6 py-3 bg-primary text-dark rounded-xl font-semibold hover:bg-primary/90 transition-colors flex items-center gap-2"
+                className="px-6 py-3 bg-primary text-dark  font-semibold hover:bg-primary/90 transition-colors flex items-center gap-2"
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -1154,13 +1154,13 @@ const AdminDashboard: React.FC = () => {
                     <motion.div
                       key={service.id}
                       layout
-                      className="bg-dark-100/50 border border-white/10 rounded-xl p-4 hover:border-primary/30 transition-colors"
+                      className="bg-dark-100/50 border border-white/10  p-4 hover:border-primary/30 transition-colors"
                     >
                       {service.image && (
-                        <div className="relative aspect-video rounded-lg overflow-hidden mb-3 bg-dark-200/50">
+                        <div className="relative aspect-video  overflow-hidden mb-3 bg-dark-200/50">
                           <img src={service.image} alt={service.name} className="w-full h-full object-cover" />
                           {(service as any).featured && (
-                            <span className="absolute top-2 left-2 px-2 py-1 rounded-md bg-amber-500/90 text-black text-[10px] font-bold tracking-wider uppercase shadow-lg">
+                            <span className="absolute top-2 left-2 px-2 py-1  bg-amber-500/90 text-black text-[10px] font-bold tracking-wider uppercase shadow-lg">
                               ★ On Home
                             </span>
                           )}
@@ -1184,7 +1184,7 @@ const AdminDashboard: React.FC = () => {
                               title={(service as any).featured
                                 ? 'Hide from home page (currently shown in “What We Repair” / “Upgrade Your Device”)'
                                 : 'Show on home page'}
-                              className={`p-2 rounded-lg transition-colors ${
+                              className={`p-2  transition-colors ${
                                 (service as any).featured
                                   ? 'bg-amber-500/25 text-amber-400 hover:bg-amber-500/35'
                                   : 'bg-white/5 text-white/40 hover:bg-white/10 hover:text-white/70'
@@ -1202,7 +1202,7 @@ const AdminDashboard: React.FC = () => {
                                 setShowProductForm(true);
                               }}
                               title="Edit service"
-                              className="p-2 bg-blue-500/20 text-blue-400 rounded-lg hover:bg-blue-500/30 transition-colors"
+                              className="p-2 bg-blue-500/20 text-blue-400  hover:bg-blue-500/30 transition-colors"
                             >
                               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -1211,7 +1211,7 @@ const AdminDashboard: React.FC = () => {
                             <button
                               onClick={() => handleDeleteProduct(service)}
                               title="Delete service"
-                              className="p-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors"
+                              className="p-2 bg-red-500/20 text-red-400  hover:bg-red-500/30 transition-colors"
                             >
                               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -1247,7 +1247,7 @@ const AdminDashboard: React.FC = () => {
                   <motion.div
                     key={user.id}
                     layout
-                    className="bg-dark-100/50 border border-white/10 rounded-xl p-4 hover:border-primary/30 transition-colors"
+                    className="bg-dark-100/50 border border-white/10  p-4 hover:border-primary/30 transition-colors"
                   >
                     <div className="flex items-center gap-3 mb-2">
                        <div className="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center text-primary font-bold text-lg shrink-0">
@@ -1271,7 +1271,7 @@ const AdminDashboard: React.FC = () => {
 
         {/* Time Slots Tab */}
         {activeTab === 'timeslots' && (
-          <div className="bg-dark-100/50 border border-white/10 rounded-xl p-6">
+          <div className="bg-dark-100/50 border border-white/10  p-6">
             <div className="mb-6">
               <label className="block text-white/70 text-sm mb-2">Select Date</label>
               <input
@@ -1279,7 +1279,7 @@ const AdminDashboard: React.FC = () => {
                 value={selectedDate}
                 onChange={(e) => setSelectedDate(e.target.value)}
                 min={new Date().toISOString().split('T')[0]}
-                className="px-4 py-3 bg-dark-200/50 border border-white/10 rounded-xl text-white focus:outline-none focus:border-primary/50"
+                className="px-4 py-3 bg-dark-200/50 border border-white/10  text-white focus:outline-none focus:border-primary/50"
               />
             </div>
 
@@ -1298,7 +1298,7 @@ const AdminDashboard: React.FC = () => {
                           blockTimeSlot(selectedDate, slot);
                         }
                       }}
-                      className={`p-4 rounded-xl border transition-all ${
+                      className={`p-4  border transition-all ${
                         isBlocked
                           ? 'bg-red-500/20 border-red-500/50 text-red-400'
                           : 'bg-green-500/10 border-green-500/30 text-green-400 hover:bg-green-500/20'
@@ -1321,7 +1321,7 @@ const AdminDashboard: React.FC = () => {
 
         {/* Settings Tab */}
         {activeTab === 'settings' && (
-          <div className="bg-dark-100/50 border border-white/10 rounded-xl p-6 space-y-6">
+          <div className="bg-dark-100/50 border border-white/10  p-6 space-y-6">
             <div>
               <h3 className="text-white font-semibold mb-4">Data Management</h3>
               <div className="space-y-3">
@@ -1331,7 +1331,7 @@ const AdminDashboard: React.FC = () => {
                     await Promise.all(liveBookings.map(b => api.delete(`/repairs/admin/booking/${b.ticketId}`).catch(() => {})));
                     fetchBookings();
                   }}
-                  className="w-full sm:w-auto px-4 py-3 bg-red-500/10 text-red-400 border border-red-500/30 rounded-xl hover:bg-red-500/20 transition-colors flex items-center gap-2"
+                  className="w-full sm:w-auto px-4 py-3 bg-red-500/10 text-red-400 border border-red-500/30  hover:bg-red-500/20 transition-colors flex items-center gap-2"
                 >
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -1344,7 +1344,7 @@ const AdminDashboard: React.FC = () => {
                     await Promise.all(liveOrders.map(o => api.delete(`/orders/${o.id}`).catch(() => {})));
                     fetchOrders();
                   }}
-                  className="w-full sm:w-auto px-4 py-3 bg-red-500/10 text-red-400 border border-red-500/30 rounded-xl hover:bg-red-500/20 transition-colors flex items-center gap-2"
+                  className="w-full sm:w-auto px-4 py-3 bg-red-500/10 text-red-400 border border-red-500/30  hover:bg-red-500/20 transition-colors flex items-center gap-2"
                 >
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -1356,7 +1356,7 @@ const AdminDashboard: React.FC = () => {
 
             <div>
               <h3 className="text-white font-semibold mb-4">Admin Info</h3>
-              <div className="bg-dark-200/50 rounded-xl p-4">
+              <div className="bg-dark-200/50  p-4">
                 <p className="text-white/70 text-sm">Admin password can be changed in the code.</p>
                 <p className="text-white/50 text-xs mt-2">Current file: src/store/adminStore.ts</p>
               </div>
@@ -1380,7 +1380,7 @@ const AdminDashboard: React.FC = () => {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-dark-100 border border-white/10 rounded-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto"
+              className="bg-dark-100 border border-white/10  p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-6">
@@ -1403,7 +1403,7 @@ const AdminDashboard: React.FC = () => {
                       handleRepairStageUpdate(selectedRepair.ticketId, nextStage);
                       setSelectedRepair({ ...selectedRepair, currentStage: nextStage });
                     }}
-                    className="w-full px-4 py-3 bg-dark-200/50 border border-white/10 rounded-xl text-white focus:outline-none focus:border-primary/50"
+                    className="w-full px-4 py-3 bg-dark-200/50 border border-white/10  text-white focus:outline-none focus:border-primary/50"
                   >
                     {repairStages.map((stage, idx) => (
                       <option key={idx} value={idx}>{stage}</option>
@@ -1419,7 +1419,7 @@ const AdminDashboard: React.FC = () => {
                       updateBookingTechnician(selectedRepair.ticketId, e.target.value);
                       setSelectedRepair({ ...selectedRepair, technicianName: e.target.value });
                     }}
-                    className="w-full px-4 py-3 bg-dark-200/50 border border-white/10 rounded-xl text-white focus:outline-none focus:border-primary/50"
+                    className="w-full px-4 py-3 bg-dark-200/50 border border-white/10  text-white focus:outline-none focus:border-primary/50"
                   >
                     {technicians.map((tech) => (
                       <option key={tech} value={tech}>{tech}</option>
@@ -1436,7 +1436,7 @@ const AdminDashboard: React.FC = () => {
                       updateBookingEstCompletion(selectedRepair.ticketId, e.target.value);
                       setSelectedRepair({ ...selectedRepair, estimatedCompletion: e.target.value });
                     }}
-                    className="w-full px-4 py-3 bg-dark-200/50 border border-white/10 rounded-xl text-white focus:outline-none focus:border-primary/50"
+                    className="w-full px-4 py-3 bg-dark-200/50 border border-white/10  text-white focus:outline-none focus:border-primary/50"
                   />
                 </div>
 
@@ -1450,7 +1450,7 @@ const AdminDashboard: React.FC = () => {
                       handleRepairCostUpdate(selectedRepair.ticketId, cost);
                       setSelectedRepair({ ...selectedRepair, totalCost: cost });
                     }}
-                    className="w-full px-4 py-3 bg-dark-200/50 border border-white/10 rounded-xl text-white focus:outline-none focus:border-primary/50"
+                    className="w-full px-4 py-3 bg-dark-200/50 border border-white/10  text-white focus:outline-none focus:border-primary/50"
                   />
                 </div>
 
@@ -1478,7 +1478,7 @@ const AdminDashboard: React.FC = () => {
               <div className="mt-6 flex gap-3">
                 <button
                   onClick={() => setSelectedRepair(null)}
-                  className="flex-1 py-3 bg-primary text-dark font-semibold rounded-xl hover:bg-primary/90 transition-colors"
+                  className="flex-1 py-3 bg-primary text-dark font-semibold  hover:bg-primary/90 transition-colors"
                 >
                   Done
                 </button>
@@ -1502,7 +1502,7 @@ const AdminDashboard: React.FC = () => {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-dark-100 border border-white/10 rounded-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto"
+              className="bg-dark-100 border border-white/10  p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-6">
@@ -1525,7 +1525,7 @@ const AdminDashboard: React.FC = () => {
                       handleOrderStatusChange(selectedOrder.id, status);
                       setSelectedOrder({ ...selectedOrder, status });
                     }}
-                    className="w-full px-4 py-3 bg-dark-200/50 border border-white/10 rounded-xl text-white focus:outline-none focus:border-primary/50"
+                    className="w-full px-4 py-3 bg-dark-200/50 border border-white/10  text-white focus:outline-none focus:border-primary/50"
                   >
                     <option value="processing">Processing</option>
                     <option value="shipped">Shipped</option>
@@ -1550,8 +1550,8 @@ const AdminDashboard: React.FC = () => {
                   <h4 className="text-white/70 text-sm mb-2">Items</h4>
                   <div className="space-y-2">
                     {selectedOrder.items.map((item, idx) => (
-                      <div key={idx} className="flex items-center gap-3 p-2 bg-dark-200/30 rounded-lg">
-                        <img src={item.image} alt={item.name} className="w-12 h-12 object-cover rounded-lg bg-dark-200" />
+                      <div key={idx} className="flex items-center gap-3 p-2 bg-dark-200/30 ">
+                        <img src={item.image} alt={item.name} className="w-12 h-12 object-cover  bg-dark-200" />
                         <div className="flex-1">
                           <p className="text-white text-sm">{item.name}</p>
                           <p className="text-white/50 text-xs">Qty: {item.quantity}</p>
@@ -1571,7 +1571,7 @@ const AdminDashboard: React.FC = () => {
               <div className="mt-6 flex gap-3">
                 <button
                   onClick={() => setSelectedOrder(null)}
-                  className="flex-1 py-3 bg-primary text-dark font-semibold rounded-xl hover:bg-primary/90 transition-colors"
+                  className="flex-1 py-3 bg-primary text-dark font-semibold  hover:bg-primary/90 transition-colors"
                 >
                   Close
                 </button>
@@ -1734,7 +1734,7 @@ const AdminDashboard: React.FC = () => {
                       name="name"
                       defaultValue={selectedProduct?.name}
                       required
-                      className="w-full px-4 py-3 bg-dark-200/50 border border-white/10 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:border-primary/50"
+                      className="w-full px-4 py-3 bg-dark-200/50 border border-white/10  text-white placeholder:text-white/40 focus:outline-none focus:border-primary/50"
                       placeholder="e.g., iPhone 15 Pro Max"
                     />
                   </div>
@@ -1746,7 +1746,7 @@ const AdminDashboard: React.FC = () => {
                       defaultValue={selectedProduct?.description}
                       required
                       rows={3}
-                      className="w-full px-4 py-3 bg-dark-200/50 border border-white/10 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:border-primary/50 resize-none"
+                      className="w-full px-4 py-3 bg-dark-200/50 border border-white/10  text-white placeholder:text-white/40 focus:outline-none focus:border-primary/50 resize-none"
                       placeholder="Product description..."
                     />
                   </div>
@@ -1760,7 +1760,7 @@ const AdminDashboard: React.FC = () => {
                       required
                       min="0"
                       step="0.01"
-                      className="w-full px-4 py-3 bg-dark-200/50 border border-white/10 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:border-primary/50"
+                      className="w-full px-4 py-3 bg-dark-200/50 border border-white/10  text-white placeholder:text-white/40 focus:outline-none focus:border-primary/50"
                       placeholder="0.00"
                     />
                   </div>
@@ -1774,7 +1774,7 @@ const AdminDashboard: React.FC = () => {
                         defaultValue={selectedProduct?.stock}
                         required
                         min="0"
-                        className="w-full px-4 py-3 bg-dark-200/50 border border-white/10 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:border-primary/50"
+                        className="w-full px-4 py-3 bg-dark-200/50 border border-white/10  text-white placeholder:text-white/40 focus:outline-none focus:border-primary/50"
                         placeholder="0"
                       />
                     </div>
@@ -1788,7 +1788,7 @@ const AdminDashboard: React.FC = () => {
                           name="serviceType"
                           defaultValue={(selectedProduct as any)?.serviceType || ''}
                           required
-                          className="w-full px-4 py-3 bg-dark-200/50 border border-white/10 rounded-xl text-white focus:outline-none focus:border-primary/50"
+                          className="w-full px-4 py-3 bg-dark-200/50 border border-white/10  text-white focus:outline-none focus:border-primary/50"
                         >
                           <option value="">Select Service Type</option>
                           <option value="repair">Hardware / Repair</option>
@@ -1826,7 +1826,7 @@ const AdminDashboard: React.FC = () => {
                           value={productFormCategory || selectedProduct?.category || ''}
                           onChange={(e) => setProductFormCategory(e.target.value)}
                           required
-                          className="w-full px-4 py-3 bg-dark-200/50 border border-white/10 rounded-xl text-white focus:outline-none focus:border-primary/50"
+                          className="w-full px-4 py-3 bg-dark-200/50 border border-white/10  text-white focus:outline-none focus:border-primary/50"
                         >
                           <option value="">Select Category</option>
                           {mainCategoryOptions.map((cat) => (
@@ -1840,7 +1840,7 @@ const AdminDashboard: React.FC = () => {
                         <select
                           name="subcategory"
                           defaultValue={selectedProduct?.subcategory}
-                          className="w-full px-4 py-3 bg-dark-200/50 border border-white/10 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:border-primary/50"
+                          className="w-full px-4 py-3 bg-dark-200/50 border border-white/10  text-white placeholder:text-white/40 focus:outline-none focus:border-primary/50"
                         >
                           <option value="">No subcategory</option>
                           {subcategoryOptions.map((cat) => (
@@ -1860,7 +1860,7 @@ const AdminDashboard: React.FC = () => {
                           type="text"
                           name="brand"
                           defaultValue={selectedProduct?.brand}
-                          className="w-full px-4 py-3 bg-dark-200/50 border border-white/10 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:border-primary/50"
+                          className="w-full px-4 py-3 bg-dark-200/50 border border-white/10  text-white placeholder:text-white/40 focus:outline-none focus:border-primary/50"
                           placeholder="e.g., Apple, Samsung"
                         />
                       </div>
@@ -1871,7 +1871,7 @@ const AdminDashboard: React.FC = () => {
                           type="text"
                           name="sku"
                           defaultValue={selectedProduct?.sku}
-                          className="w-full px-4 py-3 bg-dark-200/50 border border-white/10 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:border-primary/50"
+                          className="w-full px-4 py-3 bg-dark-200/50 border border-white/10  text-white placeholder:text-white/40 focus:outline-none focus:border-primary/50"
                           placeholder="e.g., IPH-15-PM-256"
                         />
                       </div>
@@ -1882,7 +1882,7 @@ const AdminDashboard: React.FC = () => {
                           name="condition"
                           defaultValue={(selectedProduct as any)?.condition || 'new'}
                           required
-                          className="w-full px-4 py-3 bg-dark-200/50 border border-white/10 rounded-xl text-white focus:outline-none focus:border-primary/50"
+                          className="w-full px-4 py-3 bg-dark-200/50 border border-white/10  text-white focus:outline-none focus:border-primary/50"
                         >
                           <option value="new">Brand New</option>
                           <option value="used">Used</option>
@@ -1898,7 +1898,7 @@ const AdminDashboard: React.FC = () => {
                     <div className="flex items-center gap-3">
                       {mainImageUrl ? (
                         <div className="relative">
-                          <img src={mainImageUrl} alt="main" className="w-20 h-20 object-cover rounded-lg border border-white/10" />
+                          <img src={mainImageUrl} alt="main" className="w-20 h-20 object-cover  border border-white/10" />
                           <button
                             type="button"
                             onClick={() => setMainImageUrl('')}
@@ -1907,9 +1907,9 @@ const AdminDashboard: React.FC = () => {
                           >×</button>
                         </div>
                       ) : (
-                        <div className="w-20 h-20 rounded-lg border border-dashed border-white/20 flex items-center justify-center text-white/30 text-xs">No image</div>
+                        <div className="w-20 h-20  border border-dashed border-white/20 flex items-center justify-center text-white/30 text-xs">No image</div>
                       )}
-                      <label className="px-4 py-2 bg-primary/20 hover:bg-primary/30 border border-primary/40 text-primary rounded-lg cursor-pointer text-sm">
+                      <label className="px-4 py-2 bg-primary/20 hover:bg-primary/30 border border-primary/40 text-primary  cursor-pointer text-sm">
                         {uploadingMain ? 'Uploading…' : (mainImageUrl ? 'Replace' : 'Upload Image')}
                         <input
                           type="file"
@@ -1931,7 +1931,7 @@ const AdminDashboard: React.FC = () => {
                         <div className="flex flex-wrap items-center gap-2">
                           {galleryUrls.map((url, idx) => (
                             <div key={idx} className="relative">
-                              <img src={url} alt={`extra-${idx}`} className="w-16 h-16 object-cover rounded-lg border border-white/10" />
+                              <img src={url} alt={`extra-${idx}`} className="w-16 h-16 object-cover  border border-white/10" />
                               <button
                                 type="button"
                                 onClick={() => setGalleryUrls(prev => prev.filter((_, i) => i !== idx))}
@@ -1940,7 +1940,7 @@ const AdminDashboard: React.FC = () => {
                               >×</button>
                             </div>
                           ))}
-                          <label className="w-16 h-16 rounded-lg border border-dashed border-white/20 flex items-center justify-center text-white/40 text-xs cursor-pointer hover:border-primary/60 hover:text-primary">
+                          <label className="w-16 h-16  border border-dashed border-white/20 flex items-center justify-center text-white/40 text-xs cursor-pointer hover:border-primary/60 hover:text-primary">
                             {uploadingGallery ? '…' : '+ Add'}
                             <input
                               type="file"
@@ -1973,7 +1973,7 @@ const AdminDashboard: React.FC = () => {
                                   <select
                                     name={`spec:${field.label}`}
                                     defaultValue={valueInList ? currentValue : ''}
-                                    className="w-full px-4 py-3 bg-dark-200/50 border border-white/10 rounded-xl text-white focus:outline-none focus:border-primary/50"
+                                    className="w-full px-4 py-3 bg-dark-200/50 border border-white/10  text-white focus:outline-none focus:border-primary/50"
                                   >
                                     <option value="">Select {field.label}…</option>
                                     {field.options.map((opt) => (
@@ -1997,7 +1997,7 @@ const AdminDashboard: React.FC = () => {
                                   type="text"
                                   name={`spec:${field.label}`}
                                   defaultValue={currentValue}
-                                  className="w-full px-4 py-3 bg-dark-200/50 border border-white/10 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:border-primary/50"
+                                  className="w-full px-4 py-3 bg-dark-200/50 border border-white/10  text-white placeholder:text-white/40 focus:outline-none focus:border-primary/50"
                                   placeholder={`Enter ${field.label}`}
                                 />
                               </div>
@@ -2015,7 +2015,7 @@ const AdminDashboard: React.FC = () => {
                             name="specs"
                             defaultValue={selectedProduct?.specs ? JSON.stringify(selectedProduct.specs, null, 2) : ''}
                             rows={4}
-                            className="w-full px-4 py-3 bg-dark-200/50 border border-white/10 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:border-primary/50 font-mono text-xs resize-y"
+                            className="w-full px-4 py-3 bg-dark-200/50 border border-white/10  text-white placeholder:text-white/40 focus:outline-none focus:border-primary/50 font-mono text-xs resize-y"
                             placeholder='{"Processor": "Intel Core i7", "RAM": "16GB DDR5"}'
                           />
                         </div>
@@ -2027,7 +2027,7 @@ const AdminDashboard: React.FC = () => {
                           name="features"
                           defaultValue={selectedProduct?.features ? (typeof selectedProduct.features === 'string' ? JSON.parse(selectedProduct.features).join('\n') : selectedProduct.features.join('\n')) : ''}
                           rows={4}
-                          className="w-full px-4 py-3 bg-dark-200/50 border border-white/10 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:border-primary/50 text-sm resize-y"
+                          className="w-full px-4 py-3 bg-dark-200/50 border border-white/10  text-white placeholder:text-white/40 focus:outline-none focus:border-primary/50 text-sm resize-y"
                           placeholder='Ultra-fast performance&#10;Stunning 4K display'
                         />
                       </div>
@@ -2056,7 +2056,7 @@ const AdminDashboard: React.FC = () => {
                         type="checkbox"
                         name="featured"
                         defaultChecked={selectedProduct?.featured}
-                        className="w-5 h-5 rounded border-white/10 bg-dark-200/50 text-primary focus:ring-primary focus:ring-offset-0"
+                        className="w-5 h-5  border-white/10 bg-dark-200/50 text-primary focus:ring-primary focus:ring-offset-0"
                       />
                       <span>Mark as Featured Product</span>
                     </label>
@@ -2124,30 +2124,30 @@ const CompatibleProductsPicker: React.FC<{ allProducts: any[]; initialIds: strin
   const toggle = (id: string) => setSelected(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
 
   return (
-    <div className="border border-white/10 rounded-xl p-3 bg-dark-200/30">
+    <div className="border border-white/10  p-3 bg-dark-200/30">
       <input type="hidden" name="compatibleProductIds" value={selected.join(',')} />
       <div className="flex flex-wrap gap-2 mb-3">
         <input
           type="text" value={search} onChange={(e) => setSearch(e.target.value)}
           placeholder="Search products..."
-          className="flex-1 min-w-[160px] px-3 py-2 bg-dark-200/50 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-primary/50"
+          className="flex-1 min-w-[160px] px-3 py-2 bg-dark-200/50 border border-white/10  text-white text-sm focus:outline-none focus:border-primary/50"
         />
         <select
           value={filterCat} onChange={(e) => { setFilterCat(e.target.value); setFilterSub(''); }}
-          className="px-3 py-2 bg-dark-200/50 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-primary/50"
+          className="px-3 py-2 bg-dark-200/50 border border-white/10  text-white text-sm focus:outline-none focus:border-primary/50"
         >
           <option value="">All categories</option>
           {categories.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
         <select
           value={filterSub} onChange={(e) => setFilterSub(e.target.value)}
-          className="px-3 py-2 bg-dark-200/50 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-primary/50"
+          className="px-3 py-2 bg-dark-200/50 border border-white/10  text-white text-sm focus:outline-none focus:border-primary/50"
         >
           <option value="">All subcategories</option>
           {subcategories.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
         <button type="button" onClick={() => setSelected([])}
-          className="px-3 py-2 text-xs text-white/60 hover:text-white border border-white/10 rounded-lg">
+          className="px-3 py-2 text-xs text-white/60 hover:text-white border border-white/10 ">
           Clear
         </button>
       </div>
@@ -2161,11 +2161,11 @@ const CompatibleProductsPicker: React.FC<{ allProducts: any[]; initialIds: strin
           const isSel = selected.includes(p.id);
           return (
             <button type="button" key={p.id} onClick={() => toggle(p.id)}
-              className={`flex items-center gap-2 p-2 rounded text-left text-xs transition-colors ${
+              className={`flex items-center gap-2 p-2  text-left text-xs transition-colors ${
                 isSel ? 'bg-primary/20 border border-primary/40' : 'border border-white/5 hover:border-white/20'
               }`}
             >
-              <div className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${isSel ? 'bg-primary border-primary' : 'border-white/30'}`}>
+              <div className={`w-4 h-4  border flex items-center justify-center flex-shrink-0 ${isSel ? 'bg-primary border-primary' : 'border-white/30'}`}>
                 {isSel && <svg className="w-3 h-3 text-dark" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
               </div>
               <div className="flex-1 min-w-0">
@@ -2302,7 +2302,7 @@ const FilterCategoriesAdmin: React.FC = () => {
     <div className="space-y-6">
       {/* Seed defaults banner */}
       {!loading && cats.length === 0 && (
-        <div className="bg-primary/10 border border-primary/30 rounded-xl p-5 flex flex-col sm:flex-row sm:items-center gap-4">
+        <div className="bg-primary/10 border border-primary/30  p-5 flex flex-col sm:flex-row sm:items-center gap-4">
           <div className="flex-1">
             <p className="text-primary font-semibold text-sm">No filter categories in database yet</p>
             <p className="text-white/60 text-xs mt-1">
@@ -2312,7 +2312,7 @@ const FilterCategoriesAdmin: React.FC = () => {
           <button
             onClick={seedDefaults}
             disabled={seeding}
-            className="px-5 py-2.5 bg-primary text-dark font-bold rounded-lg text-sm hover:bg-primary/90 disabled:opacity-50 whitespace-nowrap"
+            className="px-5 py-2.5 bg-primary text-dark font-bold  text-sm hover:bg-primary/90 disabled:opacity-50 whitespace-nowrap"
           >
             {seeding ? 'Seeding…' : 'Seed Default Categories'}
           </button>
@@ -2320,31 +2320,31 @@ const FilterCategoriesAdmin: React.FC = () => {
       )}
 
       {/* Feedback */}
-      {error && <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-2">{error}</p>}
-      {success && <p className="text-green-400 text-sm bg-green-500/10 border border-green-500/20 rounded-lg px-4 py-2">{success}</p>}
+      {error && <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/20  px-4 py-2">{error}</p>}
+      {success && <p className="text-green-400 text-sm bg-green-500/10 border border-green-500/20  px-4 py-2">{success}</p>}
 
       {/* Add new category */}
-      <div className="bg-dark-100/50 border border-white/10 rounded-xl p-5">
+      <div className="bg-dark-100/50 border border-white/10  p-5">
         <h3 className="text-white text-lg font-bold mb-1">Add Filter Category</h3>
         <p className="text-xs text-white/40 mb-4">Categories shown in the shop sidebar. Slug is auto-generated from name if blank.</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name (e.g. Laptops)"
-            className="px-3 py-2 bg-dark-200/50 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-primary/50" />
+            className="px-3 py-2 bg-dark-200/50 border border-white/10  text-white text-sm focus:outline-none focus:border-primary/50" />
           <input value={slug} onChange={(e) => setSlug(e.target.value)} placeholder="Slug (optional, e.g. laptops)"
-            className="px-3 py-2 bg-dark-200/50 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-primary/50" />
+            className="px-3 py-2 bg-dark-200/50 border border-white/10  text-white text-sm focus:outline-none focus:border-primary/50" />
           <input value={parentSlug} onChange={(e) => setParentSlug(e.target.value)} placeholder="Parent slug (for subcategory)"
-            className="px-3 py-2 bg-dark-200/50 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-primary/50" />
+            className="px-3 py-2 bg-dark-200/50 border border-white/10  text-white text-sm focus:outline-none focus:border-primary/50" />
           <input type="number" value={order} onChange={(e) => setOrder(Number(e.target.value))} placeholder="Sort order"
-            className="px-3 py-2 bg-dark-200/50 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-primary/50" />
+            className="px-3 py-2 bg-dark-200/50 border border-white/10  text-white text-sm focus:outline-none focus:border-primary/50" />
         </div>
         <div className="flex items-center gap-3 mt-3">
           <button onClick={create}
-            className="px-5 py-2 bg-primary text-dark font-semibold rounded-lg text-sm hover:bg-primary/90">
+            className="px-5 py-2 bg-primary text-dark font-semibold  text-sm hover:bg-primary/90">
             Add Category
           </button>
           {cats.length > 0 && (
             <button onClick={seedDefaults} disabled={seeding}
-              className="px-4 py-2 bg-white/5 text-white/60 hover:text-white border border-white/10 rounded-lg text-sm transition-colors disabled:opacity-50">
+              className="px-4 py-2 bg-white/5 text-white/60 hover:text-white border border-white/10  text-sm transition-colors disabled:opacity-50">
               {seeding ? 'Seeding…' : 'Re-seed Defaults'}
             </button>
           )}
@@ -2352,7 +2352,7 @@ const FilterCategoriesAdmin: React.FC = () => {
       </div>
 
       {/* Existing categories */}
-      <div className="bg-dark-100/50 border border-white/10 rounded-xl p-5">
+      <div className="bg-dark-100/50 border border-white/10  p-5">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-white text-lg font-bold">Shop Filter Categories ({cats.length})</h3>
           <p className="text-white/40 text-xs">These appear in the Shop sidebar for customers to filter products</p>
@@ -2366,16 +2366,16 @@ const FilterCategoriesAdmin: React.FC = () => {
             {parents.map(c => (
               <div key={c.id}>
                 {/* Parent row */}
-                <div className={`flex items-center gap-3 px-3 py-2.5 rounded-lg ${c.visible ? '' : 'opacity-50'}`}
+                <div className={`flex items-center gap-3 px-3 py-2.5  ${c.visible ? '' : 'opacity-50'}`}
                   style={{ background: 'rgba(255,255,255,0.03)' }}>
                   {editingId === c.id ? (
                     <>
                       <input value={editName} onChange={e => setEditName(e.target.value)}
-                        className="flex-1 px-2 py-1 bg-dark-200 border border-primary/40 rounded text-white text-sm focus:outline-none" />
+                        className="flex-1 px-2 py-1 bg-dark-200 border border-primary/40  text-white text-sm focus:outline-none" />
                       <input type="number" value={editOrder} onChange={e => setEditOrder(Number(e.target.value))}
-                        className="w-16 px-2 py-1 bg-dark-200 border border-white/10 rounded text-white text-sm focus:outline-none" />
-                      <button onClick={() => saveEdit(c)} className="px-3 py-1 bg-primary text-dark text-xs font-semibold rounded">Save</button>
-                      <button onClick={() => setEditingId(null)} className="px-3 py-1 bg-white/10 text-white/60 text-xs rounded">Cancel</button>
+                        className="w-16 px-2 py-1 bg-dark-200 border border-white/10  text-white text-sm focus:outline-none" />
+                      <button onClick={() => saveEdit(c)} className="px-3 py-1 bg-primary text-dark text-xs font-semibold ">Save</button>
+                      <button onClick={() => setEditingId(null)} className="px-3 py-1 bg-white/10 text-white/60 text-xs ">Cancel</button>
                     </>
                   ) : (
                     <>
@@ -2386,7 +2386,7 @@ const FilterCategoriesAdmin: React.FC = () => {
                       </div>
                       <button
                         onClick={() => setSpecsOpenId(specsOpenId === c.id ? null : c.id)}
-                        className={`px-2.5 py-1 text-xs rounded transition-colors ${
+                        className={`px-2.5 py-1 text-xs  transition-colors ${
                           specsOpenId === c.id
                             ? 'bg-primary text-dark font-semibold'
                             : 'text-primary/80 hover:text-primary border border-primary/30 hover:border-primary/50'
@@ -2394,12 +2394,12 @@ const FilterCategoriesAdmin: React.FC = () => {
                       >
                         Specs{(c.specFields?.length ?? 0) > 0 ? ` (${c.specFields!.length})` : ''}
                       </button>
-                      <button onClick={() => startEdit(c)} className="px-2.5 py-1 text-xs text-white/50 hover:text-white border border-white/10 rounded transition-colors">Edit</button>
+                      <button onClick={() => startEdit(c)} className="px-2.5 py-1 text-xs text-white/50 hover:text-white border border-white/10  transition-colors">Edit</button>
                       <button onClick={() => toggleVisible(c)}
-                        className={`px-2.5 py-1 text-xs rounded transition-colors ${c.visible ? 'bg-primary/20 text-primary hover:bg-primary/30' : 'bg-dark-200 text-white/40 hover:text-white/60'}`}>
+                        className={`px-2.5 py-1 text-xs  transition-colors ${c.visible ? 'bg-primary/20 text-primary hover:bg-primary/30' : 'bg-dark-200 text-white/40 hover:text-white/60'}`}>
                         {c.visible ? 'Visible' : 'Hidden'}
                       </button>
-                      <button onClick={() => remove(c.id)} className="px-2.5 py-1 text-xs text-red-400 hover:text-red-300 border border-red-400/20 hover:border-red-400/40 rounded transition-colors">
+                      <button onClick={() => remove(c.id)} className="px-2.5 py-1 text-xs text-red-400 hover:text-red-300 border border-red-400/20 hover:border-red-400/40  transition-colors">
                         Delete
                       </button>
                     </>
@@ -2417,16 +2417,16 @@ const FilterCategoriesAdmin: React.FC = () => {
 
                 {/* Child rows */}
                 {childrenOf(c.slug).map(child => (
-                  <div key={child.id} className={`flex items-center gap-3 px-3 py-2 ml-6 rounded-lg ${child.visible ? '' : 'opacity-50'}`}>
+                  <div key={child.id} className={`flex items-center gap-3 px-3 py-2 ml-6  ${child.visible ? '' : 'opacity-50'}`}>
                     <span className="text-white/20 text-xs">└</span>
                     {editingId === child.id ? (
                       <>
                         <input value={editName} onChange={e => setEditName(e.target.value)}
-                          className="flex-1 px-2 py-1 bg-dark-200 border border-primary/40 rounded text-white text-sm focus:outline-none" />
+                          className="flex-1 px-2 py-1 bg-dark-200 border border-primary/40  text-white text-sm focus:outline-none" />
                         <input type="number" value={editOrder} onChange={e => setEditOrder(Number(e.target.value))}
-                          className="w-16 px-2 py-1 bg-dark-200 border border-white/10 rounded text-white text-sm focus:outline-none" />
-                        <button onClick={() => saveEdit(child)} className="px-3 py-1 bg-primary text-dark text-xs font-semibold rounded">Save</button>
-                        <button onClick={() => setEditingId(null)} className="px-3 py-1 bg-white/10 text-white/60 text-xs rounded">Cancel</button>
+                          className="w-16 px-2 py-1 bg-dark-200 border border-white/10  text-white text-sm focus:outline-none" />
+                        <button onClick={() => saveEdit(child)} className="px-3 py-1 bg-primary text-dark text-xs font-semibold ">Save</button>
+                        <button onClick={() => setEditingId(null)} className="px-3 py-1 bg-white/10 text-white/60 text-xs ">Cancel</button>
                       </>
                     ) : (
                       <>
@@ -2434,12 +2434,12 @@ const FilterCategoriesAdmin: React.FC = () => {
                           <span className="text-white/70 text-sm">{child.name}</span>
                           <span className="text-white/25 text-xs font-mono ml-2">/{child.slug}</span>
                         </div>
-                        <button onClick={() => startEdit(child)} className="px-2.5 py-1 text-xs text-white/40 hover:text-white border border-white/10 rounded transition-colors">Edit</button>
+                        <button onClick={() => startEdit(child)} className="px-2.5 py-1 text-xs text-white/40 hover:text-white border border-white/10  transition-colors">Edit</button>
                         <button onClick={() => toggleVisible(child)}
-                          className={`px-2.5 py-1 text-xs rounded transition-colors ${child.visible ? 'bg-primary/20 text-primary' : 'bg-dark-200 text-white/40'}`}>
+                          className={`px-2.5 py-1 text-xs  transition-colors ${child.visible ? 'bg-primary/20 text-primary' : 'bg-dark-200 text-white/40'}`}>
                           {child.visible ? 'Visible' : 'Hidden'}
                         </button>
-                        <button onClick={() => remove(child.id)} className="px-2.5 py-1 text-xs text-red-400 hover:text-red-300 border border-red-400/20 rounded transition-colors">
+                        <button onClick={() => remove(child.id)} className="px-2.5 py-1 text-xs text-red-400 hover:text-red-300 border border-red-400/20  transition-colors">
                           Delete
                         </button>
                       </>
@@ -2451,7 +2451,7 @@ const FilterCategoriesAdmin: React.FC = () => {
 
             {/* Orphan children (parent not in list) */}
             {cats.filter(c => c.parentSlug && !parents.find(p => p.slug === c.parentSlug)).map(c => (
-              <div key={c.id} className={`flex items-center gap-3 px-3 py-2.5 rounded-lg ${c.visible ? '' : 'opacity-50'}`}
+              <div key={c.id} className={`flex items-center gap-3 px-3 py-2.5  ${c.visible ? '' : 'opacity-50'}`}
                 style={{ background: 'rgba(255,255,255,0.02)' }}>
                 <div className="flex-1 min-w-0">
                   <span className="text-white/70 text-sm">{c.name}</span>
@@ -2459,10 +2459,10 @@ const FilterCategoriesAdmin: React.FC = () => {
                   <span className="text-amber-400/60 text-xs ml-2">parent: {c.parentSlug}</span>
                 </div>
                 <button onClick={() => toggleVisible(c)}
-                  className={`px-2.5 py-1 text-xs rounded ${c.visible ? 'bg-primary/20 text-primary' : 'bg-dark-200 text-white/40'}`}>
+                  className={`px-2.5 py-1 text-xs  ${c.visible ? 'bg-primary/20 text-primary' : 'bg-dark-200 text-white/40'}`}>
                   {c.visible ? 'Visible' : 'Hidden'}
                 </button>
-                <button onClick={() => remove(c.id)} className="px-2.5 py-1 text-xs text-red-400 border border-red-400/20 rounded">Delete</button>
+                <button onClick={() => remove(c.id)} className="px-2.5 py-1 text-xs text-red-400 border border-red-400/20 ">Delete</button>
               </div>
             ))}
           </div>
@@ -2528,7 +2528,7 @@ const SpecFieldsEditor: React.FC<{
   };
 
   return (
-    <div className="ml-3 my-2 p-4 rounded-lg border border-primary/20 bg-primary/[0.04] space-y-4">
+    <div className="ml-3 my-2 p-4  border border-primary/20 bg-primary/[0.04] space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-white text-sm font-semibold">Specification Dropdowns — {cat.name}</p>
@@ -2549,7 +2549,7 @@ const SpecFieldsEditor: React.FC<{
         <p className="text-white/40 text-xs italic">No spec dropdowns yet. Add one below.</p>
       )}
       {fields.map((field, idx) => (
-        <div key={idx} className="bg-dark-200/40 border border-white/10 rounded-lg p-3">
+        <div key={idx} className="bg-dark-200/40 border border-white/10  p-3">
           <div className="flex items-center justify-between mb-2">
             <span className="text-white text-sm font-semibold">{field.label}</span>
             <button
@@ -2592,11 +2592,11 @@ const SpecFieldsEditor: React.FC<{
                 if (e.key === 'Enter') { e.preventDefault(); addOption(idx); }
               }}
               placeholder={`Add option for ${field.label}…`}
-              className="flex-1 px-3 py-1.5 bg-dark-200/60 border border-white/10 rounded text-white text-xs focus:outline-none focus:border-primary/50"
+              className="flex-1 px-3 py-1.5 bg-dark-200/60 border border-white/10  text-white text-xs focus:outline-none focus:border-primary/50"
             />
             <button
               onClick={() => addOption(idx)}
-              className="px-3 py-1.5 bg-primary/20 text-primary text-xs font-semibold rounded hover:bg-primary/30"
+              className="px-3 py-1.5 bg-primary/20 text-primary text-xs font-semibold  hover:bg-primary/30"
             >
               Add
             </button>
@@ -2614,11 +2614,11 @@ const SpecFieldsEditor: React.FC<{
             if (e.key === 'Enter') { e.preventDefault(); addField(); }
           }}
           placeholder="New field name (e.g. Display, GPU)…"
-          className="flex-1 px-3 py-2 bg-dark-200/60 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-primary/50"
+          className="flex-1 px-3 py-2 bg-dark-200/60 border border-white/10  text-white text-sm focus:outline-none focus:border-primary/50"
         />
         <button
           onClick={addField}
-          className="px-4 py-2 bg-white/10 text-white text-sm rounded-lg hover:bg-white/15"
+          className="px-4 py-2 bg-white/10 text-white text-sm  hover:bg-white/15"
         >
           Add field
         </button>
@@ -2635,7 +2635,7 @@ const SpecFieldsEditor: React.FC<{
         <button
           onClick={handleSave}
           disabled={saving}
-          className="px-5 py-2 bg-primary text-dark text-xs font-bold rounded-lg hover:bg-primary/90 disabled:opacity-50"
+          className="px-5 py-2 bg-primary text-dark text-xs font-bold  hover:bg-primary/90 disabled:opacity-50"
         >
           {saving ? 'Saving…' : 'Save dropdowns'}
         </button>
