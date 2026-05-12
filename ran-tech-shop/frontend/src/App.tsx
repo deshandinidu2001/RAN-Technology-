@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import React, { useEffect, useState, useCallback } from 'react';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import Footer from './components/layout/Footer';
 
 // Layout
@@ -33,6 +33,68 @@ import AdminDashboard from './pages/AdminDashboard';
 
 // Store
 import { useAuthStore } from './store/authStore';
+import api from './utils/api';
+
+// ─── Repair-ready notification banner ───────────────────────────────────────
+const RepairReadyNotification: React.FC = () => {
+  const { isAuthenticated, user } = useAuthStore();
+  const [readyRepairs, setReadyRepairs] = useState<any[]>([]);
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
+  const location = useLocation();
+
+  const fetchReadyRepairs = useCallback(async () => {
+    if (!isAuthenticated || !user?.email) return;
+    try {
+      const res = await api.get('/repairs/my-bookings', { params: { email: user.email } });
+      const bookings: any[] = res.data?.bookings || [];
+      setReadyRepairs(bookings.filter((b) => b.status === 'ready-for-pickup'));
+    } catch {}
+  }, [isAuthenticated, user?.email]);
+
+  useEffect(() => {
+    fetchReadyRepairs();
+    const interval = setInterval(fetchReadyRepairs, 60000);
+    return () => clearInterval(interval);
+  }, [fetchReadyRepairs]);
+
+  // Don't show on admin pages
+  if (location.pathname.startsWith('/admin')) return null;
+
+  const visible = readyRepairs.filter((r) => !dismissed.has(r.id));
+  if (!visible.length) return null;
+
+  return (
+    <div className="fixed bottom-4 right-4 z-[200] space-y-2 max-w-sm w-full px-4">
+      {visible.map((repair) => (
+        <div
+          key={repair.id}
+          className="bg-green-900/90 backdrop-blur border border-green-500/40 rounded-xl p-4 shadow-xl flex items-start gap-3"
+        >
+          <div className="w-8 h-8 bg-green-500/20 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+            <svg className="w-4 h-4 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-green-300 font-semibold text-sm">Device Ready for Pickup!</p>
+            <p className="text-white/70 text-xs mt-0.5 truncate">
+              {repair.deviceType} — Job #{repair.id.slice(0, 8)}
+            </p>
+            <p className="text-white/50 text-xs mt-1">Visit our service center to collect your device.</p>
+          </div>
+          <button
+            onClick={() => setDismissed((prev) => new Set(prev).add(repair.id))}
+            className="text-white/40 hover:text-white ml-1 flex-shrink-0"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+};
 
 const App: React.FC = () => {
   const { checkAuth, token } = useAuthStore();
@@ -105,6 +167,7 @@ const App: React.FC = () => {
           }
         />
       </Routes>
+      <RepairReadyNotification />
     </Router>
   );
 };

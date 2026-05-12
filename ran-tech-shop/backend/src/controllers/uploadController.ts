@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { uploadBuffer } from '../lib/cloudinary';
+import { compressImage } from '../lib/imageCompressor';
 
 /**
  * Upload a single image to Cloudinary
@@ -15,7 +16,9 @@ export const uploadImage = async (req: Request, res: Response): Promise<void> =>
       return;
     }
 
-    const result = await uploadBuffer(req.file.buffer, {
+    const compressed = await compressImage(req.file.buffer);
+
+    const result = await uploadBuffer(compressed, {
       // Optional: pass a target folder via form field e.g. folder=products
       folder: typeof req.body.folder === 'string' && req.body.folder
         ? req.body.folder
@@ -55,8 +58,10 @@ export const uploadImages = async (req: Request, res: Response): Promise<void> =
       ? req.body.folder
       : undefined;
 
+    const compressedBuffers = await Promise.all(files.map((f) => compressImage(f.buffer)));
+
     const results = await Promise.all(
-      files.map((f) => uploadBuffer(f.buffer, { folder }))
+      compressedBuffers.map((buf) => uploadBuffer(buf, { folder }))
     );
 
     res.json({

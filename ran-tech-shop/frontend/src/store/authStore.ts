@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import api from '../utils/api';
+import { useCartStore } from './cartStore';
+import { useFavoritesStore } from './favoritesStore';
 
 interface User {
   id: string;
@@ -16,6 +18,8 @@ interface AuthState {
   error: string | null;
 
   login: (email: string, password: string) => Promise<void>;
+  loginWithGoogle: (accessToken: string) => Promise<void>;
+  loginWithFacebook: (accessToken: string) => Promise<void>;
   register: (email: string, password: string, name: string) => Promise<void>;
   logout: () => void;
   clearError: () => void;
@@ -47,8 +51,59 @@ export const useAuthStore = create<AuthState>()(
             isAuthenticated: true,
             isLoading: false,
           });
+
+          // Restore this user's saved favorites
+          const saved = localStorage.getItem(`ran-favorites-${user.id}`);
+          if (saved) {
+            try {
+              const parsed = JSON.parse(saved);
+              useFavoritesStore.getState().loadUserFavorites(parsed.items || []);
+            } catch {}
+          }
         } catch (error: any) {
           const message = error.response?.data?.error || error.response?.data?.message || 'Login failed';
+          set({ error: message, isLoading: false });
+          throw new Error(message);
+        }
+      },
+
+      loginWithGoogle: async (accessToken: string) => {
+        set({ isLoading: true, error: null });
+        try {
+          const response = await api.post('/auth/google', { accessToken });
+          const { user, token } = response.data;
+          api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+          set({ user, token, isAuthenticated: true, isLoading: false });
+          const saved = localStorage.getItem(`ran-favorites-${user.id}`);
+          if (saved) {
+            try {
+              const parsed = JSON.parse(saved);
+              useFavoritesStore.getState().loadUserFavorites(parsed.items || []);
+            } catch {}
+          }
+        } catch (error: any) {
+          const message = error.response?.data?.error || 'Google login failed';
+          set({ error: message, isLoading: false });
+          throw new Error(message);
+        }
+      },
+
+      loginWithFacebook: async (accessToken: string) => {
+        set({ isLoading: true, error: null });
+        try {
+          const response = await api.post('/auth/facebook', { accessToken });
+          const { user, token } = response.data;
+          api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+          set({ user, token, isAuthenticated: true, isLoading: false });
+          const saved = localStorage.getItem(`ran-favorites-${user.id}`);
+          if (saved) {
+            try {
+              const parsed = JSON.parse(saved);
+              useFavoritesStore.getState().loadUserFavorites(parsed.items || []);
+            } catch {}
+          }
+        } catch (error: any) {
+          const message = error.response?.data?.error || 'Facebook login failed';
           set({ error: message, isLoading: false });
           throw new Error(message);
         }
@@ -64,7 +119,6 @@ export const useAuthStore = create<AuthState>()(
           });
           const { user, token } = response.data;
 
-          // Set token in API headers
           api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
           set({
@@ -81,8 +135,16 @@ export const useAuthStore = create<AuthState>()(
       },
 
       logout: () => {
-        // Remove token from API headers
+        const { user } = get();
+        // Save this user's favorites to a user-scoped key before clearing
+        if (user?.id) {
+          const favorites = useFavoritesStore.getState().items;
+          localStorage.setItem(`ran-favorites-${user.id}`, JSON.stringify({ items: favorites }));
+        }
+
         delete api.defaults.headers.common['Authorization'];
+        useCartStore.getState().clearCart();
+        useFavoritesStore.getState().clear();
 
         set({
           user: null,

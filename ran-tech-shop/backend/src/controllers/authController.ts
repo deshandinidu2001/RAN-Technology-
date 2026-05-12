@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { supabase } from '../lib/supabase';
 import { generateToken } from '../utils/jwt';
+import { randomBytes } from 'crypto';
 
 /**
  * Register a new user
@@ -255,5 +256,103 @@ export const changePassword = async (req: Request, res: Response): Promise<void>
   } catch (error) {
     console.error('Change password error:', error);
     res.status(500).json({ error: 'Failed to change password' });
+  }
+};
+
+/** Find or create a user from social login; returns { user, token } */
+async function findOrCreateSocialUser(email: string, name: string): Promise<{ user: any; token: string }> {
+  let { data: user } = await supabase
+    .from('User')
+    .select('id, email, name, createdAt')
+    .eq('email', email)
+    .maybeSingle();
+
+  if (!user) {
+    const randomPassword = await bcrypt.hash(randomBytes(32).toString('hex'), 10);
+    const { data: newUser, error } = await supabase
+      .from('User')
+      .insert({ email, name: name || email.split('@')[0], password: randomPassword })
+      .select('id, email, name, createdAt')
+      .single();
+
+    if (error || !newUser) throw new Error('Failed to create user');
+    user = newUser;
+  }
+
+  return { user, token: generateToken({ userId: user.id, email: user.email }) };
+}
+
+/**
+ * Google OAuth sign-in
+ * POST /api/auth/google
+ * Body: { accessToken: string }
+ */
+export const googleAuth = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { accessToken } = req.body;
+    if (!accessToken) {
+      res.status(400).json({ error: 'Access token is required' });
+      return;
+    }
+
+    const googleRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    if (!googleRes.ok) {
+      res.status(401).json({ error: 'Invalid Google token' });
+      return;
+    }
+
+    const profile = await googleRes.json() as { email?: string; name?: string };
+    const { email, name } = profile;
+
+    if (!email) {
+      res.status(400).json({ error: 'Google account must have an email address' });
+      return;
+    }
+
+    const { user, token } = await findOrCreateSocialUser(email, name || '');
+    res.json({ message: 'Login successful', user, token });
+  } catch (error) {
+    console.error('Google auth error:', error);
+    res.status(500).json({ error: 'Google authentication failed' });
+  }
+};
+
+/**
+ * Facebook OAuth sign-in
+ * POST /api/auth/facebook
+ * Body: { accessToken: string }
+ */
+export const facebookAuth = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { accessToken } = req.body;
+    if (!accessToken) {
+      res.status(400).json({ error: 'Access token is required' });
+      return;
+    }
+
+    const fbRes = await fetch(
+      `https://graph.facebook.com/me?fields=id,name,email&access_token=${encodeURIComponent(accessToken)}`
+    );
+
+    if (!fbRes.ok) {
+      res.status(401).json({ error: 'Invalid Facebook token' });
+      return;
+    }
+
+    const profile = await fbRes.json() as { id?: string; email?: string; name?: string; error?: any };
+
+    if (profile.error || !profile.email) {
+      res.status(400).json({ error: 'Facebook account must have a public email address' });
+      return;
+    }
+
+    const { user, token } = await findOrCreateSocialUser(profile.email, profile.name || '');
+    res.json({ message: 'Login successful', user, token });
+  } catch (error) {
+    console.error('Facebook auth error:', error);
+    res.status(500).json({ error: 'Facebook authentication failed' });
   }
 };

@@ -6,9 +6,9 @@ import { useOrdersStore, RepairBooking, Order } from '../store/ordersStore';
 import { Product } from '../types';
 import api from '../utils/api';
 
-type TabType = 'repairs' | 'orders' | 'products' | 'services' | 'categories' | 'users' | 'timeslots' | 'settings';
+type TabType = 'repairs' | 'history' | 'orders' | 'products' | 'services' | 'categories' | 'users' | 'timeslots' | 'settings';
 
-const repairStages = ['Received', 'Diagnosing', 'Waiting for Parts', 'Repairing', 'Ready for Pickup'];
+const repairStages = ['Received', 'Diagnosing', 'Waiting for Parts', 'Repairing', 'Ready for Pickup', 'Collected'];
 const technicians = ['Kasun Silva', 'Nimesh Jayawardena', 'Pradeep Fernando', 'Ruwan Perera'];
 
 const timeSlots = [
@@ -126,9 +126,12 @@ const bookingStatusToStage = (status?: string) => {
       return 1;
     case 'in-progress':
       return 3;
-    case 'completed':
-    case 'cancelled':
+    case 'ready-for-pickup':
       return 4;
+    case 'completed':
+      return 5;
+    case 'cancelled':
+      return 0;
     case 'pending':
     default:
       return 0;
@@ -136,7 +139,8 @@ const bookingStatusToStage = (status?: string) => {
 };
 
 const stageToBookingStatus = (stage: number) => {
-  if (stage >= 4) return 'completed';
+  if (stage >= 5) return 'completed';
+  if (stage >= 4) return 'ready-for-pickup';
   if (stage >= 3) return 'in-progress';
   if (stage >= 1) return 'confirmed';
   return 'pending';
@@ -441,12 +445,14 @@ const AdminDashboard: React.FC = () => {
   const bookingSource = liveBookings;
   const orderSource = liveOrders;
 
-  // Filter repairs based on search
-  const filteredBookings = bookingSource.filter(b => 
-    b.ticketId.includes(searchTerm) ||
-    b.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    b.customerPhone.includes(searchTerm) ||
-    b.deviceType.toLowerCase().includes(searchTerm.toLowerCase())
+  // Filter repairs based on search (active tab shows only non-collected)
+  const filteredBookings = bookingSource.filter(b =>
+    b.currentStage < 5 && (
+      b.ticketId.includes(searchTerm) ||
+      b.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      b.customerPhone.includes(searchTerm) ||
+      b.deviceType.toLowerCase().includes(searchTerm.toLowerCase())
+    )
   );
 
   // Filter orders based on search
@@ -481,8 +487,8 @@ const AdminDashboard: React.FC = () => {
   // Stats
   const stats = {
     totalRepairs: bookingSource.length,
-    pendingRepairs: bookingSource.filter(b => b.currentStage < 4).length,
-    completedRepairs: bookingSource.filter(b => b.currentStage === 4).length,
+    pendingRepairs: bookingSource.filter(b => b.currentStage < 5).length,
+    completedRepairs: bookingSource.filter(b => b.currentStage === 5).length,
     totalOrders: orderSource.length,
     processingOrders: orderSource.filter(o => o.status === 'processing').length,
     totalProducts: dbProducts.length,
@@ -578,6 +584,7 @@ const AdminDashboard: React.FC = () => {
         <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
           {[
             { id: 'repairs', label: 'Repairs', icon: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> },
+            { id: 'history', label: 'Repair History', icon: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg> },
             { id: 'orders', label: 'Orders', icon: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg> },
             { id: 'products', label: 'Products', icon: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg> },
             { id: 'services', label: 'Services', icon: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg> },
@@ -602,7 +609,7 @@ const AdminDashboard: React.FC = () => {
         </div>
 
         {/* Search */}
-        {(activeTab === 'repairs' || activeTab === 'orders' || activeTab === 'products' || activeTab === 'services' || activeTab === 'users') && (
+        {(activeTab === 'repairs' || activeTab === 'history' || activeTab === 'orders' || activeTab === 'products' || activeTab === 'services' || activeTab === 'users') && (
           <div className="mb-6">
             <div className="relative">
               <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -638,7 +645,9 @@ const AdminDashboard: React.FC = () => {
                       <div className="flex items-center gap-3 mb-2">
                         <span className="text-primary font-bold">#{repair.ticketId}</span>
                         <span className={`text-xs px-2 py-1 rounded-full ${
-                          repair.currentStage === 4 ? 'bg-green-500/20 text-green-400' : 'bg-amber-500/20 text-amber-400'
+                          repair.currentStage === 5 ? 'bg-blue-500/20 text-blue-400' :
+                          repair.currentStage === 4 ? 'bg-green-500/20 text-green-400' :
+                          'bg-amber-500/20 text-amber-400'
                         }`}>
                           {repairStages[repair.currentStage]}
                         </span>
@@ -688,6 +697,63 @@ const AdminDashboard: React.FC = () => {
                           {stage}
                         </button>
                       ))}
+                    </div>
+                  </div>
+                </motion.div>
+              ))
+            )}
+          </div>
+        )}
+
+        {/* Repair History Tab */}
+        {activeTab === 'history' && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-white font-semibold text-lg">Completed Repairs</h3>
+              <span className="text-white/50 text-sm">{bookingSource.filter(b => b.currentStage === 5).length} total</span>
+            </div>
+            {bookingSource.filter(b =>
+              b.currentStage === 5 &&
+              (b.ticketId.includes(searchTerm) ||
+               b.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+               b.customerPhone.includes(searchTerm) ||
+               b.deviceType.toLowerCase().includes(searchTerm.toLowerCase()))
+            ).length === 0 ? (
+              <div className="text-center py-12 text-white/50">No completed repairs found</div>
+            ) : (
+              bookingSource.filter(b =>
+                b.currentStage === 5 &&
+                (b.ticketId.includes(searchTerm) ||
+                 b.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                 b.customerPhone.includes(searchTerm) ||
+                 b.deviceType.toLowerCase().includes(searchTerm.toLowerCase()))
+              ).map((repair) => (
+                <motion.div
+                  key={repair.ticketId}
+                  layout
+                  className="bg-dark-100/50 border border-blue-500/20 rounded-xl p-4"
+                >
+                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <span className="text-primary font-bold">#{repair.ticketId}</span>
+                        <span className="text-xs px-2 py-1 rounded-full bg-blue-500/20 text-blue-400">
+                          Collected
+                        </span>
+                      </div>
+                      <p className="text-white font-medium">{repair.deviceType} - {repair.deviceModel}</p>
+                      <p className="text-white/50 text-sm">{repair.customerName} • {repair.customerPhone}</p>
+                      <p className="text-white/40 text-xs mt-1">
+                        Booked: {repair.bookedDate} | Completed: {repair.estimatedCompletion}
+                        {repair.totalCost ? ` | Cost: Rs. ${repair.totalCost.toLocaleString()}` : ''}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-10 h-10 bg-blue-500/10 rounded-full flex items-center justify-center">
+                        <svg className="w-5 h-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
                     </div>
                   </div>
                 </motion.div>
@@ -1916,11 +1982,16 @@ interface FilterCat { id: string; slug: string; name: string; parentSlug?: strin
 const FilterCategoriesAdmin: React.FC = () => {
   const [cats, setCats] = useState<FilterCat[]>([]);
   const [loading, setLoading] = useState(true);
+  const [seeding, setSeeding] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
   const [parentSlug, setParentSlug] = useState('');
   const [order, setOrder] = useState<number>(0);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editOrder, setEditOrder] = useState<number>(0);
 
   const load = async () => {
     setLoading(true); setError(null);
@@ -1932,6 +2003,32 @@ const FilterCategoriesAdmin: React.FC = () => {
   };
   useEffect(() => { load(); }, []);
 
+  const showSuccess = (msg: string) => {
+    setSuccess(msg);
+    setTimeout(() => setSuccess(null), 3000);
+  };
+
+  const seedDefaults = async () => {
+    if (!confirm(`This will add ${DEFAULT_FILTER_CATEGORIES.length} default categories to the database. Continue?`)) return;
+    setSeeding(true); setError(null);
+    let added = 0;
+    for (const cat of DEFAULT_FILTER_CATEGORIES) {
+      try {
+        await api.post('/filter-categories', {
+          name: cat.name, slug: cat.slug,
+          parentSlug: cat.parentSlug || undefined,
+          order: cat.order, visible: cat.visible,
+        });
+        added++;
+      } catch {
+        // skip duplicates silently
+      }
+    }
+    await load();
+    setSeeding(false);
+    showSuccess(`Added ${added} categories to the database.`);
+  };
+
   const create = async () => {
     setError(null);
     if (!name.trim()) { setError('Name is required.'); return; }
@@ -1939,6 +2036,7 @@ const FilterCategoriesAdmin: React.FC = () => {
       await api.post('/filter-categories', { name, slug: slug || undefined, parentSlug: parentSlug || undefined, order });
       setName(''); setSlug(''); setParentSlug(''); setOrder(0);
       await load();
+      showSuccess('Category added.');
     } catch (err: any) {
       setError(err?.response?.data?.error || 'Failed to create.');
     }
@@ -1946,7 +2044,7 @@ const FilterCategoriesAdmin: React.FC = () => {
 
   const remove = async (id: string) => {
     if (!confirm('Delete this category?')) return;
-    try { await api.delete(`/filter-categories/${id}`); await load(); }
+    try { await api.delete(`/filter-categories/${id}`); await load(); showSuccess('Deleted.'); }
     catch { setError('Failed to delete.'); }
   };
 
@@ -1955,52 +2053,171 @@ const FilterCategoriesAdmin: React.FC = () => {
     catch { setError('Failed to update.'); }
   };
 
+  const startEdit = (cat: FilterCat) => {
+    setEditingId(cat.id);
+    setEditName(cat.name);
+    setEditOrder(cat.order);
+  };
+
+  const saveEdit = async (cat: FilterCat) => {
+    try {
+      await api.patch(`/filter-categories/${cat.id}`, { name: editName, order: editOrder });
+      setEditingId(null);
+      await load();
+      showSuccess('Updated.');
+    } catch { setError('Failed to update.'); }
+  };
+
+  // Group into parents and children for display
+  const parents = cats.filter(c => !c.parentSlug);
+  const childrenOf = (slug: string) => cats.filter(c => c.parentSlug === slug);
+
   return (
     <div className="space-y-6">
+      {/* Seed defaults banner */}
+      {!loading && cats.length === 0 && (
+        <div className="bg-primary/10 border border-primary/30 rounded-xl p-5 flex flex-col sm:flex-row sm:items-center gap-4">
+          <div className="flex-1">
+            <p className="text-primary font-semibold text-sm">No filter categories in database yet</p>
+            <p className="text-white/60 text-xs mt-1">
+              Seed {DEFAULT_FILTER_CATEGORIES.length} default categories (Laptops, RAM, SSD, Smartphones…) to get started instantly.
+            </p>
+          </div>
+          <button
+            onClick={seedDefaults}
+            disabled={seeding}
+            className="px-5 py-2.5 bg-primary text-dark font-bold rounded-lg text-sm hover:bg-primary/90 disabled:opacity-50 whitespace-nowrap"
+          >
+            {seeding ? 'Seeding…' : 'Seed Default Categories'}
+          </button>
+        </div>
+      )}
+
+      {/* Feedback */}
+      {error && <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-2">{error}</p>}
+      {success && <p className="text-green-400 text-sm bg-green-500/10 border border-green-500/20 rounded-lg px-4 py-2">{success}</p>}
+
+      {/* Add new category */}
       <div className="bg-dark-100/50 border border-white/10 rounded-xl p-5">
         <h3 className="text-white text-lg font-bold mb-1">Add Filter Category</h3>
         <p className="text-xs text-white/40 mb-4">Categories shown in the shop sidebar. Slug is auto-generated from name if blank.</p>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name (e.g. Laptops)"
             className="px-3 py-2 bg-dark-200/50 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-primary/50" />
-          <input value={slug} onChange={(e) => setSlug(e.target.value)} placeholder="Slug (optional)"
+          <input value={slug} onChange={(e) => setSlug(e.target.value)} placeholder="Slug (optional, e.g. laptops)"
             className="px-3 py-2 bg-dark-200/50 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-primary/50" />
-          <input value={parentSlug} onChange={(e) => setParentSlug(e.target.value)} placeholder="Parent slug (subcat, optional)"
+          <input value={parentSlug} onChange={(e) => setParentSlug(e.target.value)} placeholder="Parent slug (for subcategory)"
             className="px-3 py-2 bg-dark-200/50 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-primary/50" />
-          <input type="number" value={order} onChange={(e) => setOrder(Number(e.target.value))} placeholder="Order"
+          <input type="number" value={order} onChange={(e) => setOrder(Number(e.target.value))} placeholder="Sort order"
             className="px-3 py-2 bg-dark-200/50 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-primary/50" />
         </div>
-        {error && <p className="text-red-400 text-xs mt-2">{error}</p>}
-        <button onClick={create}
-          className="mt-3 px-5 py-2 bg-primary text-dark font-semibold rounded-lg text-sm hover:bg-primary/90">
-          Add Category
-        </button>
+        <div className="flex items-center gap-3 mt-3">
+          <button onClick={create}
+            className="px-5 py-2 bg-primary text-dark font-semibold rounded-lg text-sm hover:bg-primary/90">
+            Add Category
+          </button>
+          {cats.length > 0 && (
+            <button onClick={seedDefaults} disabled={seeding}
+              className="px-4 py-2 bg-white/5 text-white/60 hover:text-white border border-white/10 rounded-lg text-sm transition-colors disabled:opacity-50">
+              {seeding ? 'Seeding…' : 'Re-seed Defaults'}
+            </button>
+          )}
+        </div>
       </div>
 
+      {/* Existing categories */}
       <div className="bg-dark-100/50 border border-white/10 rounded-xl p-5">
-        <h3 className="text-white text-lg font-bold mb-4">Existing Categories ({cats.length})</h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-white text-lg font-bold">Shop Filter Categories ({cats.length})</h3>
+          <p className="text-white/40 text-xs">These appear in the Shop sidebar for customers to filter products</p>
+        </div>
         {loading ? (
-          <p className="text-white/50 text-sm">Loading...</p>
+          <p className="text-white/50 text-sm">Loading…</p>
         ) : cats.length === 0 ? (
-          <p className="text-white/40 text-sm">No filter categories yet. Add one above.</p>
+          <p className="text-white/40 text-sm">No categories yet. Use "Seed Default Categories" above to get started.</p>
         ) : (
-          <div className="divide-y divide-white/5">
-            {cats.map(c => (
-              <div key={c.id} className="py-3 flex items-center gap-4">
+          <div className="space-y-1">
+            {parents.map(c => (
+              <div key={c.id}>
+                {/* Parent row */}
+                <div className={`flex items-center gap-3 px-3 py-2.5 rounded-lg ${c.visible ? '' : 'opacity-50'}`}
+                  style={{ background: 'rgba(255,255,255,0.03)' }}>
+                  {editingId === c.id ? (
+                    <>
+                      <input value={editName} onChange={e => setEditName(e.target.value)}
+                        className="flex-1 px-2 py-1 bg-dark-200 border border-primary/40 rounded text-white text-sm focus:outline-none" />
+                      <input type="number" value={editOrder} onChange={e => setEditOrder(Number(e.target.value))}
+                        className="w-16 px-2 py-1 bg-dark-200 border border-white/10 rounded text-white text-sm focus:outline-none" />
+                      <button onClick={() => saveEdit(c)} className="px-3 py-1 bg-primary text-dark text-xs font-semibold rounded">Save</button>
+                      <button onClick={() => setEditingId(null)} className="px-3 py-1 bg-white/10 text-white/60 text-xs rounded">Cancel</button>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex-1 min-w-0">
+                        <span className="text-white text-sm font-semibold">{c.name}</span>
+                        <span className="text-white/30 text-xs font-mono ml-2">/{c.slug}</span>
+                        <span className="text-white/30 text-xs ml-2">order: {c.order}</span>
+                      </div>
+                      <button onClick={() => startEdit(c)} className="px-2.5 py-1 text-xs text-white/50 hover:text-white border border-white/10 rounded transition-colors">Edit</button>
+                      <button onClick={() => toggleVisible(c)}
+                        className={`px-2.5 py-1 text-xs rounded transition-colors ${c.visible ? 'bg-primary/20 text-primary hover:bg-primary/30' : 'bg-dark-200 text-white/40 hover:text-white/60'}`}>
+                        {c.visible ? 'Visible' : 'Hidden'}
+                      </button>
+                      <button onClick={() => remove(c.id)} className="px-2.5 py-1 text-xs text-red-400 hover:text-red-300 border border-red-400/20 hover:border-red-400/40 rounded transition-colors">
+                        Delete
+                      </button>
+                    </>
+                  )}
+                </div>
+
+                {/* Child rows */}
+                {childrenOf(c.slug).map(child => (
+                  <div key={child.id} className={`flex items-center gap-3 px-3 py-2 ml-6 rounded-lg ${child.visible ? '' : 'opacity-50'}`}>
+                    <span className="text-white/20 text-xs">└</span>
+                    {editingId === child.id ? (
+                      <>
+                        <input value={editName} onChange={e => setEditName(e.target.value)}
+                          className="flex-1 px-2 py-1 bg-dark-200 border border-primary/40 rounded text-white text-sm focus:outline-none" />
+                        <input type="number" value={editOrder} onChange={e => setEditOrder(Number(e.target.value))}
+                          className="w-16 px-2 py-1 bg-dark-200 border border-white/10 rounded text-white text-sm focus:outline-none" />
+                        <button onClick={() => saveEdit(child)} className="px-3 py-1 bg-primary text-dark text-xs font-semibold rounded">Save</button>
+                        <button onClick={() => setEditingId(null)} className="px-3 py-1 bg-white/10 text-white/60 text-xs rounded">Cancel</button>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex-1 min-w-0">
+                          <span className="text-white/70 text-sm">{child.name}</span>
+                          <span className="text-white/25 text-xs font-mono ml-2">/{child.slug}</span>
+                        </div>
+                        <button onClick={() => startEdit(child)} className="px-2.5 py-1 text-xs text-white/40 hover:text-white border border-white/10 rounded transition-colors">Edit</button>
+                        <button onClick={() => toggleVisible(child)}
+                          className={`px-2.5 py-1 text-xs rounded transition-colors ${child.visible ? 'bg-primary/20 text-primary' : 'bg-dark-200 text-white/40'}`}>
+                          {child.visible ? 'Visible' : 'Hidden'}
+                        </button>
+                        <button onClick={() => remove(child.id)} className="px-2.5 py-1 text-xs text-red-400 hover:text-red-300 border border-red-400/20 rounded transition-colors">
+                          Delete
+                        </button>
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ))}
+
+            {/* Orphan children (parent not in list) */}
+            {cats.filter(c => c.parentSlug && !parents.find(p => p.slug === c.parentSlug)).map(c => (
+              <div key={c.id} className={`flex items-center gap-3 px-3 py-2.5 rounded-lg ${c.visible ? '' : 'opacity-50'}`}
+                style={{ background: 'rgba(255,255,255,0.02)' }}>
                 <div className="flex-1 min-w-0">
-                  <p className="text-white text-sm font-medium">{c.name}</p>
-                  <p className="text-white/40 text-xs font-mono">
-                    {c.slug}{c.parentSlug ? ` · parent: ${c.parentSlug}` : ''} · order: {c.order}
-                  </p>
+                  <span className="text-white/70 text-sm">{c.name}</span>
+                  <span className="text-white/30 text-xs font-mono ml-2">/{c.slug}</span>
+                  <span className="text-amber-400/60 text-xs ml-2">parent: {c.parentSlug}</span>
                 </div>
                 <button onClick={() => toggleVisible(c)}
-                  className={`px-3 py-1.5 text-xs rounded ${c.visible ? 'bg-primary/20 text-primary' : 'bg-dark-200 text-white/50'}`}>
+                  className={`px-2.5 py-1 text-xs rounded ${c.visible ? 'bg-primary/20 text-primary' : 'bg-dark-200 text-white/40'}`}>
                   {c.visible ? 'Visible' : 'Hidden'}
                 </button>
-                <button onClick={() => remove(c.id)}
-                  className="px-3 py-1.5 text-xs text-red-400 hover:text-red-300 border border-red-400/20 rounded">
-                  Delete
-                </button>
+                <button onClick={() => remove(c.id)} className="px-2.5 py-1 text-xs text-red-400 border border-red-400/20 rounded">Delete</button>
               </div>
             ))}
           </div>

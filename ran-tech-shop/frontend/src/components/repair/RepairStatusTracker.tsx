@@ -9,7 +9,7 @@ interface RepairRecord {
   deviceType: string;
   deviceModel: string;
   issueDescription: string;
-  currentStage: number; // 0-4 (index of stages)
+  currentStage: number; // 0-5 (index of stages)
   estimatedCompletion: string;
   technicianName: string;
   notes?: string;
@@ -20,8 +20,9 @@ const statusToStage = (status?: string): number => {
   switch (status) {
     case 'confirmed': return 1;
     case 'in-progress': return 3;
-    case 'completed':
-    case 'cancelled': return 4;
+    case 'ready-for-pickup': return 4;
+    case 'completed': return 5;
+    case 'cancelled': return 0;
     case 'pending':
     default: return 0;
   }
@@ -94,7 +95,17 @@ const REPAIR_STAGES = [
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
       </svg>
     ),
-    description: 'Device repaired and ready',
+    description: 'Device repaired and ready for collection',
+  },
+  {
+    id: 5,
+    label: 'Collected',
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+      </svg>
+    ),
+    description: 'Device collected by customer',
   },
 ];
 
@@ -540,7 +551,7 @@ const RepairStatusTracker: React.FC = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
-                <h3 className="text-xl font-bold text-green-400 mb-2">Your Device is Ready!</h3>
+                <h3 className="text-xl font-bold text-green-400 mb-2">Your Device is Ready for Pickup!</h3>
                 <p className="text-white/70 mb-4">
                   Please visit our service center to collect your device. Don't forget to bring your Job Sheet receipt.
                 </p>
@@ -568,6 +579,26 @@ const RepairStatusTracker: React.FC = () => {
                     <span>Get Directions</span>
                   </a>
                 </div>
+              </motion.div>
+            )}
+
+            {/* Collected Banner */}
+            {searchResult.currentStage === 5 && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.6 }}
+                className="mt-6 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-500/30 rounded-xl p-6 text-center"
+              >
+                <div className="w-16 h-16 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-bold text-blue-400 mb-2">Device Collected</h3>
+                <p className="text-white/70">
+                  Your device has been successfully collected. Thank you for choosing RAN Tech Shop!
+                </p>
               </motion.div>
             )}
           </motion.div>

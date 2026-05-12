@@ -16,6 +16,7 @@ interface FavoritesState {
   toggle: (item: FavoriteItem) => void;
   remove: (id: string) => void;
   clear: () => void;
+  loadUserFavorites: (items: FavoriteItem[]) => void;
 }
 
 export const useFavoritesStore = create<FavoritesState>()(
@@ -35,6 +36,7 @@ export const useFavoritesStore = create<FavoritesState>()(
       remove: (id) =>
         set((state) => ({ items: state.items.filter((i) => i.id !== id) })),
       clear: () => set({ items: [] }),
+      loadUserFavorites: (items) => set({ items }),
     }),
     { name: 'ran-favorites' }
   )

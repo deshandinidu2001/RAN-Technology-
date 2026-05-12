@@ -220,7 +220,7 @@ export const updateBookingStatus = async (req: Request, res: Response): Promise<
     const { id } = req.params;
     const { status, notes, estimatedCost, actualCost } = req.body;
 
-    const validStatuses = ['pending', 'confirmed', 'in-progress', 'completed', 'cancelled'];
+    const validStatuses = ['pending', 'confirmed', 'in-progress', 'ready-for-pickup', 'completed', 'cancelled'];
     if (status && !validStatuses.includes(status)) {
       res.status(400).json({ error: 'Invalid status' });
       return;
