@@ -3,8 +3,22 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 
-// Load environment variables from the backend folder in both src and dist builds.
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
+// Load environment variables. Try multiple paths so it works in both
+// local (ts-node from src/) and deployed (compiled, possibly flattened) layouts.
+// dotenv.config() without options also loads from process.cwd() as a fallback.
+dotenv.config(); // loads .env from cwd if present
+dotenv.config({ path: path.resolve(__dirname, '../.env') }); // src/../  or dist/../
+dotenv.config({ path: path.resolve(__dirname, '../../.env') }); // dist/X/../../  variants
+dotenv.config({ path: path.resolve(process.cwd(), 'backend/.env') }); // monorepo root cwd
+
+if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  console.error('❌ SUPABASE env vars not loaded. Searched paths:', [
+    process.cwd() + '/.env',
+    path.resolve(__dirname, '../.env'),
+    path.resolve(__dirname, '../../.env'),
+    path.resolve(process.cwd(), 'backend/.env'),
+  ]);
+}
 
 import authRoutes from './routes/auth';
 import productRoutes from './routes/products';
