@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Product } from '../types';
 import { useCartStore } from '../store/cartStore';
 import { useFavoritesStore } from '../store/favoritesStore';
+import { useAuthStore } from '../store/authStore';
 import api from '../utils/api';
 
 const ProductDetail: React.FC = () => {
@@ -14,8 +15,18 @@ const ProductDetail: React.FC = () => {
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
   const [activeTab, setActiveTab] = useState<'description' | 'specs' | 'reviews'>('description');
+  const authUser = useAuthStore((s) => s.user);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const [newReview, setNewReview] = useState({ name: '', rating: 5, text: '' });
   const [showReviewForm, setShowReviewForm] = useState(false);
+
+  // Auto-fill reviewer name when a logged-in customer opens the form.
+  useEffect(() => {
+    if (isAuthenticated && authUser?.name && !newReview.name) {
+      setNewReview((r) => ({ ...r, name: authUser.name }));
+    }
+  }, [isAuthenticated, authUser?.name]);
+
   const addToCart = useCartStore((state) => state.addItem);
   const toggleFavorite = useFavoritesStore((s) => s.toggle);
   const isFavorite = useFavoritesStore((s) => (product ? s.isFavorite(product.id) : false));
