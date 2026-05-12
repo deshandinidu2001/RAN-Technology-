@@ -98,7 +98,7 @@ const RepairAbout: React.FC = () => {
               initial={{ opacity: 0, y: 40 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3, duration: 0.8 }}
-              className="text-5xl md:text-7xl font-black leading-[0.95] tracking-tight"
+              className="text-4xl sm:text-5xl md:text-7xl font-black leading-[0.95] tracking-tight"
             >
               We fix what
               <br />

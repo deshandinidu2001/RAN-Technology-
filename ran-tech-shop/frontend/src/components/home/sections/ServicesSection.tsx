@@ -1,5 +1,6 @@
 import { useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
@@ -10,6 +11,7 @@ const services = [
   {
     title: 'Premium Laptops',
     description: 'Curated selection of high-performance laptops from top brands for professionals and gamers.',
+    href: '/shop?category=laptops',
     icon: (
       <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -20,6 +22,7 @@ const services = [
   {
     title: 'Expert Repairs',
     description: 'Professional laptop repair services with certified technicians and genuine parts.',
+    href: '/repair',
     icon: (
       <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -31,6 +34,7 @@ const services = [
   {
     title: 'Custom Builds',
     description: 'Tailored computing solutions designed to meet your specific requirements and budget.',
+    href: '/pc-build',
     icon: (
       <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -41,6 +45,7 @@ const services = [
   {
     title: 'Tech Support',
     description: '24/7 technical support to ensure your devices are always running at peak performance.',
+    href: '/contact',
     icon: (
       <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
@@ -148,7 +153,7 @@ const ServicesSection = () => {
           
           {/* 3D Title with word-by-word animation */}
           <div className="overflow-hidden perspective-1000">
-            <h2 className="text-5xl md:text-7xl font-black text-white mb-6 flex flex-wrap justify-center gap-x-2">
+            <h2 className="text-4xl sm:text-5xl md:text-7xl font-black text-white mb-6 flex flex-wrap justify-center gap-x-2">
               <span className="title-word inline-block" style={{ transformStyle: 'preserve-3d' }}>Our</span>
               <span className="title-word inline-block italic text-[#F7B500]" style={{ transformStyle: 'preserve-3d', fontFamily: 'Georgia, serif' }}>amazing</span>
               <span className="title-word inline-block" style={{ transformStyle: 'preserve-3d' }}>services!</span>
@@ -163,9 +168,10 @@ const ServicesSection = () => {
         {/* Services Grid */}
         <div ref={cardsRef} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {services.map((service, index) => (
-            <div 
-              key={index} 
-              className="service-card group"
+            <Link
+              key={index}
+              to={service.href}
+              className="service-card group block"
             >
               <div className="h-full bg-[#16161a] border border-white/10 rounded-2xl p-8 transition-all duration-300 hover:border-[#F7B500]/30">
                 {/* Icon */}
@@ -185,17 +191,14 @@ const ServicesSection = () => {
                 </p>
 
                 {/* Learn More Link */}
-                <a 
-                  href="#" 
-                  className="inline-flex items-center gap-2 text-[#F7B500] font-medium text-sm hover:gap-3 transition-all duration-300"
-                >
+                <span className="inline-flex items-center gap-2 text-[#F7B500] font-medium text-sm group-hover:gap-3 transition-all duration-300">
                   Learn More
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                   </svg>
-                </a>
+                </span>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       </div>

@@ -128,16 +128,12 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onQuickView }) => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 20 }}
-      whileHover={{ y: -5 }}
       transition={{ duration: 0.3 }}
+      className="h-full"
     >
       <div
-        ref={cardRef}
         onClick={handleCardClick}
-        className="group relative h-[465px] bg-dark-200 rounded-2xl overflow-hidden border border-white/5 hover:border-primary/30 transition-all duration-300 perspective cursor-pointer flex flex-col"
-        style={{ transformStyle: 'preserve-3d' }}
-        onMouseMove={handleMouseMove}
-        onMouseLeave={handleMouseLeave}
+        className="group relative h-[465px] bg-dark-200 rounded-2xl overflow-hidden border border-white/5 hover:border-primary/60 hover:bg-dark-100 transition-colors duration-300 cursor-pointer flex flex-col"
       >
         {/* Image container */}
         <div className="relative h-52 flex-shrink-0 overflow-hidden">
@@ -149,7 +145,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onQuickView }) => {
               const target = e.target as HTMLImageElement;
               target.src = `https://placehold.co/800x600/1a1b1e/f7b500?text=${encodeURIComponent(product.category.replace('-', ' ').toUpperCase())}`;
             }}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            className="w-full h-full object-cover"
           />
           
           {/* Gradient overlay */}

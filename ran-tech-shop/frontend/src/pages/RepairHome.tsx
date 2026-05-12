@@ -547,7 +547,7 @@ const ServicesSection = ({ navigate, services }: { navigate: (path: string) => v
               <div className="h-px w-12 bg-black/20" />
               <span className="text-xs font-mono tracking-[0.3em] text-black/40 uppercase">Services</span>
             </div>
-            <h2 className="text-5xl md:text-7xl font-light text-black tracking-tight">
+            <h2 className="text-4xl sm:text-5xl md:text-7xl font-light text-black tracking-tight">
               <RevealText>What We Repair</RevealText>
             </h2>
           </div>
@@ -682,136 +682,115 @@ const ServicesSection = ({ navigate, services }: { navigate: (path: string) => v
 };
 
 /* ─── Process Section ────────────────────────────────────────── */
+// CSS-sticky pin + Framer Motion useScroll. The section is taller than
+// the viewport — its inner panel sticks while the user scrolls, and the
+// card track translates horizontally based on scroll progress. Mobile
+// falls back to a vertical stack.
 const ProcessSection = () => {
-  const ref = useRef<HTMLElement>(null);
-  const pinRef = useRef<HTMLDivElement>(null);
-  const isInView = useInView(ref, { once: true, margin: '-120px' });
-  const progress = useMotionValue(0);
-  const lineProgress = useTransform(progress, [0, 1], [0, 1]);
+  const sectionRef = useRef<HTMLDivElement>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({ target: sectionRef, offset: ['start start', 'end end'] });
+  const smoothProgress = useSpring(scrollYProgress, { stiffness: 110, damping: 28, mass: 0.45 });
+  const [trackWidth, setTrackWidth] = useState(0);
+  const [isDesktop, setIsDesktop] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
 
+  // Measure how far the track must translate horizontally + watch breakpoint
   useEffect(() => {
-    if (!ref.current || !pinRef.current) return;
-    // Skip pin/scrub on small screens. it traps mobile scroll & overlays content
-    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-      setActiveIndex(PROCESS_STEPS.length - 1);
-      progress.set(1);
-      return;
-    }
-
-    let trigger: ScrollTrigger | null = null;
-    // Defer creation so the parent's Lenis + ticker are wired to ScrollTrigger
-    // before we create this trigger; otherwise measurements happen pre-smooth-scroll.
-    const setupTimer = setTimeout(() => {
-      if (!ref.current || !pinRef.current) return;
-      trigger = ScrollTrigger.create({
-        trigger: ref.current,
-        pin: pinRef.current,
-        pinSpacing: true,
-        start: 'top top',
-        end: '+=1500',
-        scrub: 0.25,
-        invalidateOnRefresh: true,
-        onUpdate: (self) => {
-          const value = self.progress;
-          progress.set(value);
-          setActiveIndex(
-            Math.min(PROCESS_STEPS.length - 1, Math.floor(value * PROCESS_STEPS.length))
-          );
-        },
-      });
-      ScrollTrigger.refresh();
-    }, 350);
-
-    return () => {
-      clearTimeout(setupTimer);
-      trigger?.kill();
+    const measure = () => {
+      const desktop = window.matchMedia('(min-width: 1024px)').matches;
+      setIsDesktop(desktop);
+      if (!trackRef.current) return;
+      const distance = desktop ? Math.max(0, trackRef.current.scrollWidth - window.innerWidth) : 0;
+      setTrackWidth(distance);
     };
-  }, [progress]);
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, []);
+
+  // Drive activeIndex from progress
+  useEffect(() => {
+    const unsub = smoothProgress.on('change', (v) => {
+      setActiveIndex(Math.min(PROCESS_STEPS.length - 1, Math.floor(v * PROCESS_STEPS.length)));
+    });
+    return () => unsub();
+  }, [smoothProgress]);
+
+  const x = useTransform(smoothProgress, [0, 1], [0, -trackWidth]);
 
   return (
-    <section ref={ref} className="relative bg-black">
-      <div ref={pinRef} className="relative min-h-screen bg-black overflow-hidden flex items-center py-20 md:py-24">
+    // Section height controls how much vertical scroll is consumed before the
+    // pin releases. ~300vh = 200vh of horizontal scroll travel + 100vh of pin.
+    <section ref={sectionRef} className="relative bg-black lg:h-[300vh]">
+      <div className="relative lg:sticky lg:top-0 lg:h-screen bg-black overflow-hidden flex flex-col justify-center py-16 lg:py-0">
         <div
-          className="absolute inset-0 opacity-60"
+          className="absolute inset-0 opacity-60 pointer-events-none"
           style={{
-            backgroundImage:
-              'radial-gradient(circle, rgba(255,255,255,0.045) 1px, transparent 1px)',
+            backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.045) 1px, transparent 1px)',
             backgroundSize: '28px 28px',
           }}
         />
 
-      <div className="relative z-10 w-full container mx-auto px-4 lg:px-6">
-        <motion.div
-          initial={{ opacity: 0, y: 28 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-          className="mb-10 md:mb-12"
-        >
-          <div className="flex items-center gap-4 mb-6">
-            <div className="h-px w-12 bg-white/25" />
-            <span className="text-xs font-mono tracking-[0.32em] text-white/45 uppercase">Repair Process</span>
+        <div className="relative z-10 w-full">
+          <div className="container mx-auto px-4 lg:px-6 mb-10 lg:mb-14">
+            <motion.div
+              initial={{ opacity: 0, y: 28 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <div className="flex items-center gap-4 mb-6">
+                <div className="h-px w-12 bg-white/25" />
+                <span className="text-xs font-mono tracking-[0.32em] text-white/45 uppercase">Repair Process</span>
+              </div>
+              <div className="grid lg:grid-cols-12 gap-8 lg:gap-14 items-end">
+                <h2 className="lg:col-span-6 text-4xl sm:text-5xl md:text-7xl font-light text-white tracking-tight leading-[0.95]">
+                  <RevealText>How It Works</RevealText>
+                </h2>
+                <p className="lg:col-span-4 text-sm md:text-base text-white/50 leading-relaxed max-w-xl">
+                  A clear four-step repair flow, from booking to pickup, designed to keep your device moving without confusion.
+                </p>
+              </div>
+            </motion.div>
           </div>
-          <div className="grid lg:grid-cols-12 gap-8 lg:gap-14 items-end">
-            <h2 className="lg:col-span-6 text-5xl md:text-7xl font-light text-white tracking-tight leading-[0.95]">
-              <RevealText>How It Works</RevealText>
-            </h2>
-            <p className="lg:col-span-4 text-sm md:text-base text-white/50 leading-relaxed max-w-xl">
-              A clear four-step repair flow, from booking to pickup, designed to keep your device moving without confusion.
-            </p>
-          </div>
-        </motion.div>
 
-        <div className="relative">
-          <div className="absolute top-10 left-0 right-0 h-px bg-white/10 hidden lg:block" />
-          <motion.div
-            className="absolute top-10 left-0 right-0 h-px bg-white hidden lg:block origin-left"
-            style={{ scaleX: lineProgress }}
-          />
+          {/* Horizontal track on desktop, vertical stack on mobile */}
+          <div className="lg:overflow-hidden">
+            <motion.div
+              ref={trackRef}
+              style={isDesktop ? { x } : undefined}
+              className="flex flex-col lg:flex-row gap-5 lg:gap-10 px-4 lg:pl-[10vw] lg:pr-[10vw] will-change-transform"
+            >
+              {PROCESS_STEPS.map((step, i) => {
+                const isActive = i === activeIndex;
+                const isPassed = i < activeIndex;
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-5 lg:gap-6">
-            {PROCESS_STEPS.map((step, i) => {
-              const isActive = i === activeIndex;
-              const isPassed = i < activeIndex;
-
-              return (
-                <motion.div
-                  key={step.step}
-                  initial={{ opacity: 0, y: 34 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, margin: '-80px' }}
-                  animate={{
-                    y: isActive ? -10 : 0,
-                    opacity: isActive || isPassed || isInView ? 1 : 0.65,
-                  }}
-                  transition={{ duration: 0.45, delay: i * 0.04, ease: [0.22, 1, 0.36, 1] }}
-                  className="relative"
-                >
+                return (
                   <motion.div
-                    whileHover={{ y: -6 }}
+                    key={step.step}
+                    initial={{ opacity: 0, y: 28 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, margin: '-80px' }}
+                    transition={{ duration: 0.5, delay: i * 0.05, ease: [0.22, 1, 0.36, 1] }}
                     animate={{
                       backgroundColor: isActive ? '#ffffff' : '#111111',
                       borderColor: isActive || isPassed ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.10)',
                       color: isActive ? '#000000' : '#ffffff',
                     }}
-                    transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-                    className={`group h-full min-h-[260px] border p-7 md:p-8 transition-colors duration-500 ${
-                      isActive
-                        ? 'shadow-[0_24px_70px_rgba(255,255,255,0.08)]'
-                        : 'hover:border-white/35'
+                    className={`shrink-0 w-full lg:w-[60vw] xl:w-[50vw] 2xl:w-[42vw] border p-7 md:p-10 min-h-[300px] lg:min-h-[420px] transition-shadow duration-500 ${
+                      isActive ? 'shadow-[0_24px_70px_rgba(255,255,255,0.08)]' : ''
                     }`}
                   >
-                    <div className="flex items-start mb-12">
+                    <div className="flex items-start mb-10">
                       <div
-                        className={`h-16 w-16 flex items-center justify-center border font-mono text-2xl font-light ${
+                        className={`h-16 w-16 flex items-center justify-center border font-mono text-2xl font-light transition-colors ${
                           isActive ? 'border-black/20 text-black' : isPassed ? 'border-white/35 text-white' : 'border-white/15 text-white/55'
                         }`}
                       >
                         {step.step}
                       </div>
                     </div>
-
                     <p
                       className={`text-[10px] font-mono tracking-[0.26em] uppercase mb-4 ${
                         isActive ? 'text-black/45' : isPassed ? 'text-white/45' : 'text-white/35'
@@ -819,35 +798,39 @@ const ProcessSection = () => {
                     >
                       {isActive ? 'Active Step' : isPassed ? 'Completed' : `Step ${step.step}`}
                     </p>
-                    <h3 className="text-2xl md:text-3xl font-medium tracking-tight mb-4">
-                      {step.title}
-                    </h3>
-                    <p className={`text-sm leading-relaxed ${isActive ? 'text-black/58' : 'text-white/52'}`}>
-                      {step.desc}
-                    </p>
+                    <h3 className="text-2xl md:text-3xl font-medium tracking-tight mb-4">{step.title}</h3>
+                    <p className={`text-sm leading-relaxed ${isActive ? 'text-black/58' : 'text-white/52'}`}>{step.desc}</p>
                   </motion.div>
-
-                </motion.div>
-              );
-            })}
+                );
+              })}
+            </motion.div>
           </div>
 
-          <div className="mt-12 h-px bg-white/10 overflow-hidden">
-            <motion.div
-              className="h-full bg-white origin-left"
-              style={{ scaleX: lineProgress }}
-            />
+          {/* Scroll progress bar (desktop only) */}
+          <div className="hidden lg:block container mx-auto px-4 lg:px-6 mt-12">
+            <div className="h-px bg-white/10 overflow-hidden">
+              <motion.div className="h-full bg-white origin-left" style={{ scaleX: smoothProgress }} />
+            </div>
           </div>
         </div>
-      </div>
       </div>
     </section>
   );
 };
 
 /* ─── Upgrades Section ───────────────────────────────────────── */
-const UpgradesSection = ({ upgrades }: { upgrades: UpgradeItem[] }) => (
-  <section className="py-32 bg-white">
+const UpgradesSection = ({ upgrades }: { upgrades: UpgradeItem[] }) => {
+  const navigate = useNavigate();
+  const routeForUpgrade = (title: string) => {
+    const t = title.toLowerCase();
+    if (t.includes('ram') || t.includes('memory')) return '/shop?category=ram';
+    if (t.includes('ssd') || t.includes('storage') || t.includes('nvme') || t.includes('hdd')) return '/shop?category=ssd';
+    if (t.includes('battery')) return '/shop?category=battery';
+    if (t.includes('cool') || t.includes('thermal') || t.includes('fan')) return '/shop?category=cooling-pad';
+    return '/repair?category=upgrade';
+  };
+  return (
+  <section className="relative py-32 bg-white overflow-hidden">
     <div className="container mx-auto px-4 lg:px-6">
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
@@ -857,7 +840,7 @@ const UpgradesSection = ({ upgrades }: { upgrades: UpgradeItem[] }) => (
           <div className="h-px w-12 bg-black/20" />
           <span className="text-xs font-mono tracking-[0.3em] text-black/40 uppercase">Upgrades</span>
         </div>
-        <h2 className="text-5xl md:text-7xl font-light text-black tracking-tight">
+        <h2 className="text-4xl sm:text-5xl md:text-7xl font-light text-black tracking-tight">
           <RevealText>Upgrade Your Device</RevealText>
         </h2>
         <motion.p initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }}
@@ -875,6 +858,15 @@ const UpgradesSection = ({ upgrades }: { upgrades: UpgradeItem[] }) => (
             initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }} transition={{ delay: i * 0.1, duration: 0.7 }}
             whileHover="hovered"
+            onClick={() => navigate(routeForUpgrade(upgrade.title))}
+            role="link"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                navigate(routeForUpgrade(upgrade.title));
+              }
+            }}
             className="group relative bg-black/[0.02] border border-black/5 hover:border-black/20 p-10 transition-all duration-700 cursor-pointer overflow-hidden"
           >
             {/* Hover fill */}
@@ -910,7 +902,8 @@ const UpgradesSection = ({ upgrades }: { upgrades: UpgradeItem[] }) => (
       </div>
     </div>
   </section>
-);
+  );
+};
 
 /* ─── Custom Build Section (white) ───────────────────────────── */
 const CustomBuildSection = ({ navigate }: { navigate: (path: string) => void }) => {
@@ -944,7 +937,7 @@ const CustomBuildSection = ({ navigate }: { navigate: (path: string) => void }) 
 
       {/* Floating accent words drifting horizontally */}
       <motion.div style={{ x: badgeX }} aria-hidden
-        className="absolute -top-4 left-0 right-0 whitespace-nowrap text-[120px] md:text-[200px] font-black tracking-tighter text-white/[0.03] select-none pointer-events-none leading-none"
+        className="hidden md:block absolute top-1/2 -translate-y-1/2 left-0 right-0 whitespace-nowrap text-[120px] md:text-[200px] font-black tracking-tighter text-white/[0.03] select-none pointer-events-none leading-none"
       >
         BUILD · ASSEMBLE · STRESS-TEST · BUILD · ASSEMBLE
       </motion.div>
@@ -964,10 +957,10 @@ const CustomBuildSection = ({ navigate }: { navigate: (path: string) => void }) 
               <span className="text-xs font-mono tracking-[0.3em] text-white/40 uppercase">Custom Build</span>
             </motion.div>
 
-            <h2 className="text-5xl md:text-7xl font-light text-white tracking-tight">
+            <h2 className="text-4xl sm:text-5xl md:text-7xl font-light text-white tracking-tight">
               <RevealText>Build Your</RevealText>
             </h2>
-            <h2 className="text-5xl md:text-7xl font-light text-white/25 tracking-tight">
+            <h2 className="text-4xl sm:text-5xl md:text-7xl font-light text-white/25 tracking-tight">
               <RevealText delay={0.25}>Dream PC</RevealText>
             </h2>
 
@@ -1075,7 +1068,7 @@ const ReviewsSection = ({
             <div className="h-px w-12 bg-black/20" />
             <span className="text-xs font-mono tracking-[0.3em] text-black/40 uppercase">Reviews</span>
           </div>
-          <h2 className="text-5xl md:text-7xl font-light text-black tracking-tight">
+          <h2 className="text-4xl sm:text-5xl md:text-7xl font-light text-black tracking-tight">
             <RevealText>What Customers Say</RevealText>
           </h2>
         </motion.div>
@@ -1249,7 +1242,7 @@ const FeaturesSection = () => (
           <div className="h-px w-12 bg-white/20" />
           <span className="text-xs font-mono tracking-[0.3em] text-white/40 uppercase">Why Choose Us</span>
         </div>
-        <h2 className="text-5xl md:text-7xl font-light text-white tracking-tight">
+        <h2 className="text-4xl sm:text-5xl md:text-7xl font-light text-white tracking-tight">
           <RevealText>Why We're The Best</RevealText>
         </h2>
       </motion.div>
@@ -1307,10 +1300,10 @@ const CTASection = ({ navigate }: { navigate: (path: string) => void }) => {
       <motion.div style={{ y }} className="relative z-10 container mx-auto px-4 lg:px-6 text-center">
         {/* Large heading */}
         <div className="mb-10">
-          <h2 className="text-5xl md:text-7xl lg:text-8xl font-black text-white tracking-tight">
+          <h2 className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-black text-white tracking-tight">
             <RevealText>Ready to</RevealText>
           </h2>
-          <h2 className="text-5xl md:text-7xl lg:text-8xl font-extralight text-white/30">
+          <h2 className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-extralight text-white/30">
             <RevealText delay={0.3}>Repair?</RevealText>
           </h2>
         </div>

@@ -24,7 +24,7 @@ const VideoShowcaseSection = () => {
   return (
     <section className="relative w-full overflow-hidden bg-[#0A0A0B]">
       {/* ── Video container with aspect ratio ──────────────── */}
-      <div className="relative w-full" style={{ aspectRatio: '21 / 9' }}>
+      <div className="relative w-full aspect-[4/5] sm:aspect-[16/9] md:aspect-[21/9]">
         {/* Background video */}
         <video
           ref={videoRef}

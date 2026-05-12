@@ -461,6 +461,21 @@ const MobileMenu: React.FC<{ isOpen: boolean; onClose: () => void; onSearchOpen:
                   </Link>
                 </motion.div>
               ))}
+
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: (navItems.length + 1) * 0.1 }}
+                className="pt-3 mt-2 border-t border-white/10"
+              >
+                <Link
+                  to="/"
+                  onClick={onClose}
+                  className="flex items-center gap-2 px-4 py-3 rounded-xl font-medium text-white/70 hover:text-white hover:bg-white/5 transition-colors"
+                >
+                  <span>←</span> Main Site
+                </Link>
+              </motion.div>
             </nav>
 
             {/* CTA */}

@@ -375,7 +375,7 @@ const PCBuild: React.FC = () => {
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3, duration: 0.8 }}
-            className="text-5xl md:text-7xl font-black leading-[0.95] tracking-tight"
+            className="text-4xl sm:text-5xl md:text-7xl font-black leading-[0.95] tracking-tight"
           >
             Build your
             <br />
@@ -696,10 +696,10 @@ const PCBuild: React.FC = () => {
       <section className="py-32 bg-black text-white overflow-hidden">
         <div className="max-w-5xl mx-auto px-6 text-center">
           <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
-            <h2 className="text-5xl md:text-7xl font-black text-white tracking-tight mb-4">
+            <h2 className="text-4xl sm:text-5xl md:text-7xl font-black text-white tracking-tight mb-4">
               <RevealText>Not sure what</RevealText>
             </h2>
-            <h2 className="text-5xl md:text-7xl font-extralight text-white/30">
+            <h2 className="text-4xl sm:text-5xl md:text-7xl font-extralight text-white/30">
               <RevealText delay={0.3}>to pick?</RevealText>
             </h2>
           </motion.div>

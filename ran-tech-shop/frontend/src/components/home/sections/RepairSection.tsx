@@ -199,7 +199,7 @@ const RepairSection = () => {
             <span className="text-white/50 text-lg">Fast, reliable, and affordable</span>
           </motion.div>
           
-          <h2 className="text-5xl md:text-7xl lg:text-8xl font-black text-white mb-6 flex flex-wrap justify-center gap-x-2">
+          <h2 className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-black text-white mb-6 flex flex-wrap justify-center gap-x-2">
             <span>Get</span>
             <span className="italic text-[#F7B500]" style={{ fontFamily: 'Georgia, serif' }}>professional</span>
             <span>repairs!</span>

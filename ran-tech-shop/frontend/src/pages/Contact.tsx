@@ -426,7 +426,7 @@ const Contact: React.FC = () => {
             {...fade}
             className="bg-[#0F0F11] border border-white/[0.05] rounded-3xl overflow-hidden relative"
           >
-            <div className="aspect-[21/8] relative">
+            <div className="aspect-[4/3] sm:aspect-[16/9] md:aspect-[21/8] relative">
               <iframe
                 title="RAN Tech Shop, Monaragala"
                 src="https://www.google.com/maps?q=Monaragala,+Sri+Lanka&z=13&output=embed"

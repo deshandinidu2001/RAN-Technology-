@@ -544,12 +544,12 @@ const Shop: React.FC = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
-            className="flex-1"
+            className="flex-1 w-full min-w-0"
           >
             {/* Results count and mobile sort */}
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <p className="text-white/60">
+            <div className="flex items-center justify-between gap-3 mb-6 flex-wrap">
+              <div className="min-w-0 flex-1">
+                <p className="text-white/60 text-sm sm:text-base">
                   {searchQuery && (
                     <span className="block text-sm text-primary mb-1">
                       Results for "{searchQuery}"

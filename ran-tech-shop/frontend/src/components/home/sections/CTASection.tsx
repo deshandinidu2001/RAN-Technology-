@@ -176,7 +176,7 @@ const CTASection = () => {
                     animateBy="words"
                     direction="bottom"
                     delay={200}
-                    className="text-5xl md:text-7xl lg:text-8xl font-black leading-tight"
+                    className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-black leading-tight"
                   />
                 </div>
               </div>

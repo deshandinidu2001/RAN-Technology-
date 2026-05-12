@@ -316,10 +316,10 @@ const RepairBooking: React.FC = () => {
               <div className="h-px w-12 bg-white/20" />
               <span className="text-xs font-mono tracking-[0.3em] text-white/40 uppercase">Book Repair</span>
             </div>
-            <h1 className="text-5xl md:text-7xl font-light text-white tracking-tight mb-4">
+            <h1 className="text-4xl sm:text-5xl md:text-7xl font-light text-white tracking-tight mb-4">
               <RevealText>Schedule Your</RevealText>
             </h1>
-            <h1 className="text-5xl md:text-7xl font-light text-white/30 tracking-tight">
+            <h1 className="text-4xl sm:text-5xl md:text-7xl font-light text-white/30 tracking-tight">
               <RevealText delay={0.3}>Repair</RevealText>
             </h1>
             <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
