@@ -62,7 +62,7 @@ const Checkout: React.FC = () => {
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen pt-24 pb-16">
+      <div className="min-h-screen pt-24 pb-16 bg-[#0A0A0B]">
         <div className="container mx-auto px-4">
           <div className="max-w-md mx-auto text-center py-20">
             <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -87,7 +87,7 @@ const Checkout: React.FC = () => {
 
   if (items.length === 0 && step !== 'confirmation') {
     return (
-      <div className="min-h-screen pt-24 pb-16">
+      <div className="min-h-screen pt-24 pb-16 bg-[#0A0A0B]">
         <div className="container mx-auto px-4">
           <div className="max-w-md mx-auto text-center py-20">
             <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -111,7 +111,7 @@ const Checkout: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen pt-24 pb-16">
+    <div className="min-h-screen pt-24 pb-16 bg-[#0A0A0B]">
       <div className="container mx-auto px-4">
         {/* Progress bar */}
         {step !== 'confirmation' && (

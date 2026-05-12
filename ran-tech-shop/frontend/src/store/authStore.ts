@@ -52,13 +52,26 @@ export const useAuthStore = create<AuthState>()(
             isLoading: false,
           });
 
-          // Restore this user's saved favorites
-          const saved = localStorage.getItem(`ran-favorites-${user.id}`);
-          if (saved) {
+          // Restore this user's saved favorites + cart so each customer
+          // sees only their own state, even if another account was used
+          // on the same browser earlier.
+          const savedFavs = localStorage.getItem(`ran-favorites-${user.id}`);
+          if (savedFavs) {
             try {
-              const parsed = JSON.parse(saved);
+              const parsed = JSON.parse(savedFavs);
               useFavoritesStore.getState().loadUserFavorites(parsed.items || []);
             } catch {}
+          }
+          const savedCart = localStorage.getItem(`ran-cart-${user.id}`);
+          if (savedCart) {
+            try {
+              const parsed = JSON.parse(savedCart);
+              useCartStore.getState().loadUserCart(parsed.items || []);
+            } catch {}
+          } else {
+            // First time this user signs in here — start with an empty cart
+            // so they don't inherit the previous account's items.
+            useCartStore.getState().clearCart();
           }
         } catch (error: any) {
           const message = error.response?.data?.error || error.response?.data?.message || 'Login failed';
@@ -127,6 +140,12 @@ export const useAuthStore = create<AuthState>()(
             isAuthenticated: true,
             isLoading: false,
           });
+
+          // Brand-new account on this device: start with a clean cart and
+          // favorites so the new customer doesn't see leftover items from
+          // another session on the same browser.
+          useCartStore.getState().clearCart();
+          useFavoritesStore.getState().clear();
         } catch (error: any) {
           const message = error.response?.data?.error || error.response?.data?.message || 'Registration failed';
           set({ error: message, isLoading: false });
@@ -136,10 +155,13 @@ export const useAuthStore = create<AuthState>()(
 
       logout: () => {
         const { user } = get();
-        // Save this user's favorites to a user-scoped key before clearing
+        // Save this user's favorites AND cart to user-scoped keys before
+        // clearing, so they're restored next time this account logs in.
         if (user?.id) {
           const favorites = useFavoritesStore.getState().items;
           localStorage.setItem(`ran-favorites-${user.id}`, JSON.stringify({ items: favorites }));
+          const cartItems = useCartStore.getState().items;
+          localStorage.setItem(`ran-cart-${user.id}`, JSON.stringify({ items: cartItems }));
         }
 
         delete api.defaults.headers.common['Authorization'];

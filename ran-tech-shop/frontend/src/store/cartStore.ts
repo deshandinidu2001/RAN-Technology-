@@ -20,6 +20,7 @@ interface CartState {
   clearCart: () => void;
   isInCart: (id: string) => boolean;
   getItemQuantity: (id: string) => number;
+  loadUserCart: (items: CartItem[]) => void;
 }
 
 const calculateTotals = (items: CartItem[]) => {
@@ -96,6 +97,12 @@ export const useCartStore = create<CartState>()(
       getItemQuantity: (id) => {
         const item = get().items.find((item) => item.id === id);
         return item?.quantity || 0;
+      },
+
+      // Replace the in-memory cart with a user's saved items.
+      // Called from authStore on login so each customer sees their own cart.
+      loadUserCart: (items) => {
+        set({ items, ...calculateTotals(items) });
       },
     }),
     {

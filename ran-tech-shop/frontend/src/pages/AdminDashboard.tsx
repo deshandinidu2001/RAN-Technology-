@@ -1596,13 +1596,28 @@ const AdminDashboard: React.FC = () => {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-dark-100 border border-white/10 rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+              className="bg-black border-2 border-white/20 p-8 max-w-3xl w-full max-h-[90vh] overflow-y-auto"
             >
-              <h2 className="text-white text-2xl font-bold mb-6">
-                {selectedProduct
-                  ? ((selectedProduct as any).isService || serviceFormMode ? 'Edit Service' : 'Edit Product')
-                  : (serviceFormMode ? 'Add New Service' : 'Add New Product')}
-              </h2>
+              <div className="flex items-start justify-between mb-6 pb-4 border-b border-white/15">
+                <div>
+                  <p className="text-white/40 text-[10px] tracking-[0.3em] uppercase font-medium mb-1">
+                    {selectedProduct ? 'Editing' : 'New entry'}
+                  </p>
+                  <h2 className="text-white text-2xl font-black uppercase tracking-wide">
+                    {selectedProduct
+                      ? ((selectedProduct as any).isService || serviceFormMode ? 'Edit Service' : 'Edit Product')
+                      : (serviceFormMode ? 'Add New Service' : 'Add New Product')}
+                  </h2>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { setShowProductForm(false); setServiceFormMode(false); setProductFormCategory(''); setSelectedProduct(null); }}
+                  className="w-8 h-8 border border-white/15 text-white/60 hover:text-white hover:border-white/40 flex items-center justify-center"
+                  aria-label="Close"
+                >
+                  ✕
+                </button>
+              </div>
 
               <form
                 onSubmit={(e) => {
@@ -1680,6 +1695,37 @@ const AdminDashboard: React.FC = () => {
                 }}
                 className="space-y-4"
               >
+                {/* Progressive flow: pick a category first; the rest of the
+                    form only appears once a category has been chosen (or when
+                    editing an existing item, or for services which have their
+                    own type selector). */}
+                {!serviceFormMode && !selectedProduct && (
+                  <div className="bg-black border border-white/15 p-5 space-y-3">
+                    <label className="block text-white/50 text-[10px] tracking-[0.3em] uppercase font-medium">
+                      Step 1 · Pick a product category
+                    </label>
+                    <select
+                      value={productFormCategory}
+                      onChange={(e) => setProductFormCategory(e.target.value)}
+                      className="w-full px-4 py-3 bg-black border border-white/20 text-white focus:outline-none focus:border-white/60"
+                    >
+                      <option value="">Select Category</option>
+                      {mainCategoryOptions.map((cat) => (
+                        <option key={cat.slug} value={cat.slug}>{cat.name}</option>
+                      ))}
+                    </select>
+                    {!productFormCategory && (
+                      <p className="text-white/40 text-xs">
+                        Choose what kind of product you're adding. The rest of
+                        the form (name, price, specs…) appears once you pick one.
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Only render the heavy form once we know the category /
+                    are editing / are adding a service. */}
+                {(productFormCategory || serviceFormMode || selectedProduct) && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="md:col-span-2">
                     <label className="block text-white/70 text-sm mb-2">Product Name *</label>
@@ -2016,8 +2062,12 @@ const AdminDashboard: React.FC = () => {
                     </label>
                   </div>
                 </div>
+                )}
 
-                <div className="flex gap-3 pt-4">
+                {/* Submit row — visible whenever a category has been chosen,
+                    we're editing, or we're in service-add mode. */}
+                {(productFormCategory || serviceFormMode || selectedProduct) && (
+                <div className="flex gap-3 pt-4 border-t border-white/15">
                   <button
                     type="button"
                     onClick={() => {
@@ -2026,17 +2076,18 @@ const AdminDashboard: React.FC = () => {
                       setServiceFormMode(false);
                       setProductFormCategory('');
                     }}
-                    className="flex-1 py-3 bg-dark-200/50 text-white font-semibold rounded-xl hover:bg-dark-200 transition-colors"
+                    className="flex-1 py-3 bg-black border border-white/20 text-white font-bold uppercase tracking-wide text-xs hover:bg-white/5 transition-colors"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 py-3 bg-primary text-dark font-semibold rounded-xl hover:bg-primary/90 transition-colors"
+                    className="flex-1 py-3 bg-white text-black font-black uppercase tracking-wide text-xs hover:bg-white/85 transition-colors"
                   >
-                    {selectedProduct ? 'Update Product' : 'Add Product'}
+                    {selectedProduct ? 'Update Product' : (serviceFormMode ? 'Add Service' : 'Add Product')}
                   </button>
                 </div>
+                )}
               </form>
             </motion.div>
           </motion.div>
