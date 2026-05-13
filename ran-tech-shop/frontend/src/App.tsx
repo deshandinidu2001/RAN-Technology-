@@ -21,6 +21,8 @@ import Profile from './pages/Profile';
 // Pages - Repair Section
 import RepairHome from './pages/RepairHome';
 import RepairBooking from './pages/RepairBooking';
+import RepairQuote from './pages/RepairQuote';
+import RepairProfile from './pages/RepairProfile';
 import RepairAbout from './pages/RepairAbout';
 import RepairContact from './pages/RepairContact';
 import PCBuild from './pages/PCBuild';
@@ -145,6 +147,8 @@ const App: React.FC = () => {
         <Route element={<RepairLayout />}>
           <Route path="/repair-home" element={<RepairHome />} />
           <Route path="/repair" element={<RepairBooking />} />
+          <Route path="/repair/quote/:id" element={<RepairQuote />} />
+          <Route path="/repair/profile" element={<RepairProfile />} />
           <Route path="/pc-build" element={<PCBuild />} />
           <Route path="/repair-about" element={<RepairAbout />} />
           <Route path="/repair-contact" element={<RepairContact />} />

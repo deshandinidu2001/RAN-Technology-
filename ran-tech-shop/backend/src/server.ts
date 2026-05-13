@@ -28,6 +28,8 @@ import quoteRoutes from './routes/quotes';
 import filterCategoryRoutes from './routes/filterCategories';
 import uploadRoutes from './routes/uploads';
 import userRoutes from './routes/users';
+import notificationRoutes from './routes/notifications';
+import repairCategoryRoutes from './routes/repairCategories';
 
 // Create Express app
 const app: Express = express();
@@ -90,6 +92,8 @@ app.use('/api/repairs', repairRoutes);
 app.use('/api/quotes', quoteRoutes);
 app.use('/api/filter-categories', filterCategoryRoutes);
 app.use('/api/uploads', uploadRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/repair-categories', repairCategoryRoutes);
 
 // 404 handler
 app.use((_req: Request, res: Response) => {

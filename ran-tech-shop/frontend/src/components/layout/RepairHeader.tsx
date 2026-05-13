@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, useScroll, useMotionValueEvent } from 'framer-motion';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useCartStore } from '../../store/cartStore';
 import { useAuthStore } from '../../store/authStore';
+import NotificationBell from '../ui/NotificationBell';
 
 // Color palette - Same as Shop Header
 const colors = {
@@ -128,10 +129,23 @@ const UserMenu: React.FC = () => {
               <p className="text-white/50 text-sm truncate">{user.email}</p>
             </div>
             <div className="p-2">
+              <Link
+                to="/repair/profile"
+                onClick={() => setIsOpen(false)}
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors text-sm"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                My Profile
+              </Link>
               <button
                 onClick={() => { logout(); setIsOpen(false); }}
-                className="w-full text-left px-3 py-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors text-sm"
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors text-sm"
               >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
                 Sign Out
               </button>
             </div>
@@ -139,6 +153,67 @@ const UserMenu: React.FC = () => {
         )}
       </AnimatePresence>
     </div>
+  );
+};
+
+// Search modal — searches repair services and navigates to the booking page.
+const RepairSearchModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
+  const navigate = useNavigate();
+  const [q, setQ] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setQ('');
+      setTimeout(() => inputRef.current?.focus(), 50);
+    }
+  }, [isOpen]);
+
+  const submit = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    const term = q.trim();
+    if (!term) return;
+    onClose();
+    // Navigate to the shop search page; same UX as the shop header search.
+    navigate(`/shop?search=${encodeURIComponent(term)}`);
+  };
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          onClick={onClose}
+          className="fixed inset-0 z-[80] bg-black/80 backdrop-blur-md flex items-start justify-center pt-24 px-4"
+        >
+          <motion.form
+            onSubmit={submit}
+            onClick={(e) => e.stopPropagation()}
+            initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -20, opacity: 0 }}
+            className="w-full max-w-2xl bg-black border border-white/15"
+          >
+            <div className="flex items-center gap-3 px-5 py-4">
+              <svg className="w-5 h-5 text-white/50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <input
+                ref={inputRef}
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Search products, parts, services..."
+                className="flex-1 bg-transparent text-white placeholder:text-white/30 focus:outline-none"
+              />
+              <button type="button" onClick={onClose} className="text-white/40 hover:text-white text-sm">
+                Esc
+              </button>
+            </div>
+            <div className="px-5 py-3 border-t border-white/10 text-[11px] text-white/40">
+              Press <kbd className="px-1 py-0.5 bg-white/10 text-white/70">Enter</kbd> to search the shop catalog.
+            </div>
+          </motion.form>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 };
 
@@ -250,6 +325,7 @@ const RepairHeader: React.FC = () => {
   const location = useLocation();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const { scrollY } = useScroll();
 
   useMotionValueEvent(scrollY, 'change', (latest) => {
@@ -336,12 +412,17 @@ const RepairHeader: React.FC = () => {
                 <motion.button
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
+                  onClick={() => setIsSearchOpen(true)}
                   className="hidden lg:flex w-10 h-10 rounded-full items-center justify-center border border-white/20 hover:border-primary/50 transition-colors"
+                  aria-label="Search"
                 >
                   <svg className="w-5 h-5 text-white/70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
                 </motion.button>
+
+                {/* Notifications */}
+                <NotificationBell />
 
                 {/* Cart */}
                 <CartIcon />
@@ -379,6 +460,9 @@ const RepairHeader: React.FC = () => {
           </motion.div>
         </div>
       </motion.header>
+
+      {/* Search modal */}
+      <RepairSearchModal isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
 
       {/* Mobile menu */}
       <MobileMenu isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} />

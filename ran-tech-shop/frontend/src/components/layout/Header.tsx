@@ -3,6 +3,7 @@ import { motion, AnimatePresence, useScroll, useMotionValueEvent } from 'framer-
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useCartStore } from '../../store/cartStore';
 import { useAuthStore } from '../../store/authStore';
+import NotificationBell from '../ui/NotificationBell';
 import api from '../../utils/api';
 import type { Product } from '../../types';
 
@@ -609,6 +610,9 @@ const Header: React.FC = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
                 </motion.button>
+
+                {/* Notifications */}
+                <NotificationBell />
 
                 {/* Cart */}
                 <CartIcon />

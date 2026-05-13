@@ -27,6 +27,7 @@ export interface Order {
 
 export interface RepairBooking {
   ticketId: string;
+  serialNo?: number | null;
   deviceType: string;
   deviceModel: string;
   issueDescription: string;
@@ -41,6 +42,13 @@ export interface RepairBooking {
   customerEmail: string;
   customerPhone: string;
   createdAt: string;
+  // Quote-flow fields (optional — only populated for quote requests).
+  requestType?: 'booking' | 'quote';
+  status?: string;
+  quotedPrice?: number | null;
+  quotedPriceMax?: number | null;
+  quoteMessage?: string | null;
+  issueImages?: string[];
 }
 
 interface OrdersState {

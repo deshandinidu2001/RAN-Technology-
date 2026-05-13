@@ -1,26 +1,27 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { useOrdersStore } from '../store/ordersStore';
 import { useAdminStore } from '../store/adminStore';
-import { ArrowRight, ArrowLeft, Check, Clock, Calendar, User, Mail, Phone, ChevronDown } from 'lucide-react';
+import {
+  ArrowRight, ArrowLeft, Check, Clock, Calendar, User, Mail, Phone,
+  Monitor, Smartphone, Laptop, Upload, X,
+} from 'lucide-react';
 import api from '../utils/api';
-import type { Product } from '../types';
-import RepairPartPicker, { detectPartConfig, type SelectedPart, type PartPickerConfig } from '../components/repair/RepairPartPicker';
+import type { Product, RepairCategory } from '../types';
 import EmailQuoteButton from '../components/ui/EmailQuoteButton';
+import RepairPartPicker, { type PartPickerConfig, type SelectedPart } from '../components/repair/RepairPartPicker';
 
 /* ─── Types ───────────────────────────────────────────────────── */
 interface TimeSlot { id: string; time: string; available: boolean }
+type DeviceType = 'desktop' | 'mobile' | 'laptop';
 
 /* ─── Constants ──────────────────────────────────────────────── */
-const serviceCategories = [
-  { id: 'all', name: 'All Services' },
-  { id: 'hardware', name: 'Hardware' },
-  { id: 'software', name: 'Software' },
-  { id: 'data', name: 'Data Recovery' },
-  { id: 'upgrade', name: 'Upgrades' },
-  { id: 'cleaning', name: 'Cleaning' },
+const DEVICE_OPTIONS: { id: DeviceType; label: string; icon: React.ComponentType<any>; blurb: string }[] = [
+  { id: 'desktop', label: 'Desktop', icon: Monitor,    blurb: 'Towers, AIOs, custom builds' },
+  { id: 'laptop',  label: 'Laptop',  icon: Laptop,     blurb: 'Notebooks, gaming laptops, ultrabooks' },
+  { id: 'mobile',  label: 'Mobile',  icon: Smartphone, blurb: 'Phones, tablets, smart devices' },
 ];
 
 const defaultTimeSlots: TimeSlot[] = [
@@ -34,11 +35,22 @@ const defaultTimeSlots: TimeSlot[] = [
   { id: '8', time: '05:00 PM - 06:00 PM', available: true },
 ];
 
-const STEPS = [
+// Step 4 ("Details") is shown only when at least one selected service has a
+// price range — that's the path that turns into a quote request. Fixed-price
+// selections jump straight from Services → Contact → Confirm.
+const STEPS_QUOTE = [
   { num: 1, label: 'Date & Time' },
-  { num: 2, label: 'Services' },
-  { num: 3, label: 'Contact' },
-  { num: 4, label: 'Confirm' },
+  { num: 2, label: 'Device' },
+  { num: 3, label: 'Services' },
+  { num: 4, label: 'Details' },
+  { num: 5, label: 'Confirm' },
+];
+const STEPS_FIXED = [
+  { num: 1, label: 'Date & Time' },
+  { num: 2, label: 'Device' },
+  { num: 3, label: 'Services' },
+  { num: 4, label: 'Contact' },
+  { num: 5, label: 'Confirm' },
 ];
 
 /* ─── Helpers ─────────────────────────────────────────────────── */
@@ -48,16 +60,67 @@ const normalizePrice = (price: number | string | null | undefined) => {
 };
 const formatPrice = (p: number | string | null | undefined) => normalizePrice(p).toLocaleString('en-LK');
 
-const getCategoryServiceTypes = (cat: string): string[] => {
-  switch (cat) {
-    case 'hardware': return ['repair', 'hardware'];
-    case 'software': return ['software'];
-    case 'data': return ['data'];
-    case 'upgrade': return ['upgrade'];
-    case 'cleaning': return ['cleaning', 'maintenance'];
-    default: return [];
+const getServicePricingMode = (s: Product): 'fixed' | 'range' | 'quote' => {
+  if (s.priceMode === 'quote') return 'quote';
+  if (s.priceMode === 'range') return 'range';
+  if (s.priceMode === 'fixed') return 'fixed';
+  // Legacy fallback when priceMode is missing: infer from priceMax.
+  const min = normalizePrice(s.price);
+  const max = s.priceMax != null ? normalizePrice(s.priceMax) : null;
+  return max && max > min ? 'range' : 'fixed';
+};
+
+const getPriceDisplay = (s: Product) => {
+  const mode = getServicePricingMode(s);
+  if (mode === 'quote') return { mode, label: 'Quote on inspection' };
+  const min = normalizePrice(s.price);
+  const max = s.priceMax != null ? normalizePrice(s.priceMax) : null;
+  if (mode === 'range' && max && max > min) {
+    return { mode, label: `Rs. ${formatPrice(min)} – ${formatPrice(max)}` };
+  }
+  return { mode, label: `Rs. ${formatPrice(min)}` };
+};
+
+const getServiceCompatibleIds = (s: Product): string[] => {
+  const raw = (s as any).compatibility;
+  if (!raw) return [];
+  try { const v = typeof raw === 'string' ? JSON.parse(raw) : raw; return Array.isArray(v) ? v.map(String) : []; }
+  catch { return []; }
+};
+
+// When the admin hasn't pinned specific compatible products, auto-detect a
+// catalog query from the service name so the customer can still pick a part
+// from shop inventory (e.g. RAM Upgrade → category=ram).
+type AutoPartKind = 'ram' | 'ssd' | 'battery' | 'screen' | 'gpu' | 'keyboard' | 'cooler' | null;
+const detectAutoPartKind = (s: Product): AutoPartKind => {
+  const text = `${s.name || ''} ${s.serviceType || ''} ${(s as any).subcategory || ''}`.toLowerCase();
+  if (/\bram\b|memory/.test(text)) return 'ram';
+  if (/\bssd\b|nvme|hard\s*drive|storage|hdd/.test(text)) return 'ssd';
+  if (/battery/.test(text)) return 'battery';
+  if (/screen|display|lcd|panel/.test(text)) return 'screen';
+  if (/\bgpu\b|graphics|video card/.test(text)) return 'gpu';
+  if (/keyboard/.test(text)) return 'keyboard';
+  if (/cool|fan|heatsink/.test(text)) return 'cooler';
+  return null;
+};
+const partKindToQuery = (kind: AutoPartKind): Record<string, string> | null => {
+  switch (kind) {
+    case 'ram':     return { category: 'components', subcategory: 'ram' };
+    case 'ssd':     return { category: 'components', subcategory: 'storage' };
+    case 'gpu':     return { category: 'components', subcategory: 'gpus' };
+    case 'cooler':  return { category: 'components', subcategory: 'cooling' };
+    case 'keyboard':return { category: 'accessories', subcategory: 'keyboards' };
+    case 'battery': return { search: 'battery' };
+    case 'screen':  return { search: 'screen' };
+    default:        return null;
   }
 };
+
+// True if a service requires the customer to pick a part before booking —
+// either the admin pinned compatible products or the service name implies
+// an inventory-backed part (RAM/SSD/etc).
+const serviceNeedsPart = (s: Product): boolean =>
+  getServiceCompatibleIds(s).length > 0 || detectAutoPartKind(s) !== null;
 
 const getAvailableDates = () => {
   const dates = [];
@@ -104,19 +167,21 @@ const RepairBooking: React.FC = () => {
   const { addBooking } = useOrdersStore();
   const { getBlockedSlotsForDate } = useAdminStore();
 
-  // Pre-select the service category when the page is opened from a footer
-  // category link (e.g. /repair?category=upgrade). Falls back to "all".
-  const initialCategory = (() => {
-    const c = searchParams.get('category');
-    return c && serviceCategories.some(sc => sc.id === c) ? c : 'all';
+  const initialDevice = (() => {
+    const d = searchParams.get('device') as DeviceType | null;
+    return d && ['desktop', 'mobile', 'laptop'].includes(d) ? d : null;
   })();
 
   const [step, setStep] = useState(1);
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedTimeSlot, setSelectedTimeSlot] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState(initialCategory);
+  const [selectedDevice, setSelectedDevice] = useState<DeviceType | null>(initialDevice);
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const [deviceModel, setDeviceModel] = useState('');
   const [issueDescription, setIssueDescription] = useState('');
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [uploading, setUploading] = useState(false);
   const [customerName, setCustomerName] = useState(user?.name || '');
   const [customerEmail, setCustomerEmail] = useState(user?.email || '');
   const [customerPhone, setCustomerPhone] = useState('');
@@ -127,10 +192,34 @@ const RepairBooking: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [services, setServices] = useState<Product[]>([]);
   const [servicesLoading, setServicesLoading] = useState(true);
+  const [adminCategories, setAdminCategories] = useState<RepairCategory[]>([]);
   const [selectedParts, setSelectedParts] = useState<Record<string, SelectedPart>>({});
   const [pickerService, setPickerService] = useState<{ service: Product; config: PartPickerConfig } | null>(null);
 
   const availableDates = getAvailableDates();
+
+  // Restore a pending booking after the user signs in.
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    try {
+      const raw = sessionStorage.getItem('repair:pending');
+      if (!raw) return;
+      const v = JSON.parse(raw);
+      sessionStorage.removeItem('repair:pending');
+      if (v.selectedDate) setSelectedDate(v.selectedDate);
+      if (v.selectedTimeSlot) setSelectedTimeSlot(v.selectedTimeSlot);
+      if (v.selectedDevice) setSelectedDevice(v.selectedDevice);
+      if (Array.isArray(v.selectedServices)) setSelectedServices(v.selectedServices);
+      if (v.selectedParts) setSelectedParts(v.selectedParts);
+      if (v.deviceModel) setDeviceModel(v.deviceModel);
+      if (v.issueDescription) setIssueDescription(v.issueDescription);
+      if (Array.isArray(v.imageUrls)) setImageUrls(v.imageUrls);
+      if (v.customerName) setCustomerName(v.customerName);
+      if (v.customerEmail) setCustomerEmail(v.customerEmail);
+      if (v.customerPhone) setCustomerPhone(v.customerPhone);
+      setStep(5);
+    } catch { /* ignore */ }
+  }, [isAuthenticated]);
 
   // Fetch services
   useEffect(() => {
@@ -143,13 +232,13 @@ const RepairBooking: React.FC = () => {
     })();
   }, []);
 
-  // React to URL category changes (e.g. footer Category link clicked while
-  // already on this page. Router updates searchParams without a remount).
+  // Fetch admin-managed repair categories for the chosen device.
   useEffect(() => {
-    const c = searchParams.get('category');
-    const next = c && serviceCategories.some(sc => sc.id === c) ? c : 'all';
-    if (next !== selectedCategory) setSelectedCategory(next);
-  }, [searchParams]);
+    if (!selectedDevice) { setAdminCategories([]); return; }
+    api.get(`/repair-categories?deviceType=${selectedDevice}`)
+      .then(res => setAdminCategories(res.data?.categories ?? []))
+      .catch(() => setAdminCategories([]));
+  }, [selectedDevice]);
 
   // Fetch time slots when date changes
   useEffect(() => {
@@ -165,92 +254,231 @@ const RepairBooking: React.FC = () => {
     })();
   }, [selectedDate]);
 
-  // Fetch user bookings
   useEffect(() => {
     if (!isAuthenticated) return;
     api.get('/repairs/my-bookings').catch(() => {});
   }, [isAuthenticated]);
 
+  // Services filtered by chosen device.
+  const deviceServices = useMemo(() => {
+    if (!selectedDevice) return [] as Product[];
+    return services.filter(s => {
+      const dt = (s as any).deviceType as string | undefined;
+      // Services without a deviceType are treated as universal (shown for all).
+      return !dt || dt.toLowerCase() === selectedDevice;
+    });
+  }, [services, selectedDevice]);
+
+  // Match a service to a category. We accept the slug OR the category name
+  // (case-insensitive) against the service's own `serviceType` / `subcategory`
+  // so admin-tagged values like "Cleaning" still match a slug of "cleaning".
+  const serviceMatchesSlug = (s: Product, slug: string, name?: string) => {
+    const haystack = [
+      (s.serviceType || '').toLowerCase(),
+      ((s as any).subcategory || '').toLowerCase(),
+    ];
+    const needles = [slug.toLowerCase(), ...(name ? [name.toLowerCase()] : [])];
+    return needles.some(n => haystack.includes(n));
+  };
+
+  // Category list: prefer admin-managed RepairCategory rows for this device,
+  // but only show ones that actually have services attached. Falls back to
+  // deriving from each service's own serviceType when no categories exist.
+  const categories = useMemo(() => {
+    if (adminCategories.length) {
+      const withCounts = adminCategories
+        .map(c => ({
+          slug: c.slug,
+          name: c.name,
+          count: deviceServices.filter(s => serviceMatchesSlug(s, c.slug, c.name)).length,
+        }))
+        .filter(c => c.count > 0);
+      // Always include "All" up front; show categories only when at least one
+      // has services, otherwise the pills row would just be a single "All".
+      return [{ slug: 'all', name: 'All', count: deviceServices.length }, ...withCounts];
+    }
+    const set = new Set<string>();
+    deviceServices.forEach(s => { if (s.serviceType) set.add(s.serviceType); });
+    return [
+      { slug: 'all', name: 'All', count: deviceServices.length },
+      ...Array.from(set).sort().map(slug => ({ slug, name: slug, count: deviceServices.filter(s => (s.serviceType || '') === slug).length })),
+    ];
+  }, [adminCategories, deviceServices]);
+
+  // Reset the category pill if the previously-selected one no longer has any
+  // services after data changes (e.g. after switching device).
+  useEffect(() => {
+    if (selectedCategory !== 'all' && !categories.some(c => c.slug === selectedCategory)) {
+      setSelectedCategory('all');
+    }
+  }, [categories, selectedCategory]);
+
   const filteredServices = selectedCategory === 'all'
-    ? services
-    : services.filter(s => getCategoryServiceTypes(selectedCategory).includes(s.serviceType || ''));
+    ? deviceServices
+    : deviceServices.filter(s => {
+        const cat = categories.find(c => c.slug === selectedCategory);
+        return serviceMatchesSlug(s, selectedCategory, cat?.name);
+      });
 
   const getSelectedServiceObjects = () => services.filter(s => selectedServices.includes(s.id));
+
+  // For totals, only fixed-price services contribute (range/quote = pending quote).
+  // Selected parts (RAM/SSD/etc.) always count if picked.
   const calculateTotal = () => getSelectedServiceObjects().reduce((t, s) => {
-    const partsTotal = selectedParts[s.id]?.partsTotal || 0;
-    return t + normalizePrice(s.price) + partsTotal;
+    const mode = getServicePricingMode(s);
+    const svcPart = mode === 'fixed' ? normalizePrice(s.price) : 0;
+    const part = selectedParts[s.id]?.partsTotal || 0;
+    return t + svcPart + part;
   }, 0);
+
+  const hasQuoteService = () =>
+    getSelectedServiceObjects().some(s => getServicePricingMode(s) !== 'fixed');
+
+  const isQuoteRequest = hasQuoteService;
+  const STEPS = hasQuoteService() ? STEPS_QUOTE : STEPS_FIXED;
+
+  // Open the part-picker for a service. Prefer the admin-pinned compatibility
+  // list; if it's empty, fall back to an auto-detected catalog query so the
+  // customer still gets to choose a RAM/SSD/etc. from shop inventory.
+  const openPartPicker = (svc: Product) => {
+    const compatibleProductIds = getServiceCompatibleIds(svc);
+    const autoKind = detectAutoPartKind(svc);
+    const autoQuery = compatibleProductIds.length === 0 ? partKindToQuery(autoKind) : null;
+    if (compatibleProductIds.length === 0 && !autoQuery) return;
+    setPickerService({
+      service: svc,
+      config: {
+        kind: (autoKind || 'generic') as any,
+        serviceName: svc.name,
+        servicePrice: normalizePrice(svc.price),
+        productQuery: autoQuery || {},
+        compatibleProductIds: compatibleProductIds.length ? compatibleProductIds : undefined,
+      },
+    });
+  };
+
   const toggleService = (id: string) => {
     setSelectedServices(prev => {
-      const isRemoving = prev.includes(id);
-      if (isRemoving) {
-        // Removing a service also clears its part selection.
+      if (prev.includes(id)) {
         setSelectedParts(p => { const n = { ...p }; delete n[id]; return n; });
         return prev.filter(x => x !== id);
       }
-      // Adding: open part picker if this service needs one.
       const svc = services.find(s => s.id === id);
-      if (svc) {
-        const cfg = detectPartConfig({ name: svc.name, price: normalizePrice(svc.price), serviceType: svc.serviceType, compatibility: (svc as any).compatibility });
-        if (cfg) setPickerService({ service: svc, config: cfg });
-      }
+      if (svc && serviceNeedsPart(svc)) openPartPicker(svc);
       return [...prev, id];
     });
   };
-  const openPartPicker = (svc: Product) => {
-    const cfg = detectPartConfig({ name: svc.name, price: normalizePrice(svc.price), serviceType: svc.serviceType, compatibility: (svc as any).compatibility });
-    if (cfg) setPickerService({ service: svc, config: cfg });
-  };
+
   const buildQuoteItems = () => {
-    const out: { name: string; description?: string; quantity?: number; price: number }[] = [];
+    const items: { name: string; description?: string; price: number }[] = [];
     getSelectedServiceObjects().forEach(s => {
-      const part = selectedParts[s.id];
-      const desc = part?.laptop ? `For ${part.laptop.brand || ''} ${part.laptop.name}`.trim() : undefined;
-      out.push({ name: s.name, description: desc, price: normalizePrice(s.price) });
-      if (part?.product) {
-        out.push({ name: `↳ ${part.product.name}`, description: part.product.brand || undefined, price: Number(part.product.price) });
-      }
+      const mode = getServicePricingMode(s);
+      const desc = mode === 'quote'
+        ? 'Quote on inspection'
+        : (mode === 'range' && s.priceMax
+            ? `Estimated Rs. ${formatPrice(s.price)} – ${formatPrice(s.priceMax)}`
+            : undefined);
+      items.push({ name: s.name, description: desc, price: mode === 'fixed' ? normalizePrice(s.price) : 0 });
+      const part = selectedParts[s.id]?.product;
+      if (part) items.push({ name: `↳ ${part.name}`, description: part.brand || undefined, price: Number(part.price) });
     });
-    return out;
+    return items;
   };
 
+  // Image upload
+  const handleFiles = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    setUploading(true);
+    setError(null);
+    try {
+      const uploaded: string[] = [];
+      for (const file of Array.from(files)) {
+        const fd = new FormData();
+        fd.append('file', file);
+        fd.append('folder', 'repair-requests');
+        const res = await api.post('/uploads/image', fd, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        if (res.data?.url) uploaded.push(res.data.url);
+      }
+      setImageUrls(prev => [...prev, ...uploaded]);
+    } catch {
+      setError('Failed to upload one or more images.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const removeImage = (url: string) =>
+    setImageUrls(prev => prev.filter(u => u !== url));
+
   const handleSubmit = async () => {
+    if (!isAuthenticated) {
+      // Stash the request locally so we can resume after login.
+      try {
+        sessionStorage.setItem('repair:pending', JSON.stringify({
+          selectedDate, selectedTimeSlot, selectedDevice, selectedServices,
+          selectedParts, deviceModel, issueDescription, imageUrls,
+          customerName, customerEmail, customerPhone,
+        }));
+      } catch { /* ignore */ }
+      navigate('/login?next=/repair');
+      return;
+    }
     setIsLoading(true);
     setError(null);
     try {
-      const serviceNames = getSelectedServiceObjects().map(s => s.name);
+      const serviceNames = getSelectedServiceObjects().map(s => {
+        const part = selectedParts[s.id]?.product;
+        return part ? `${s.name} (${part.name})` : s.name;
+      });
+      const deviceLabel = DEVICE_OPTIONS.find(d => d.id === selectedDevice)?.label || 'Device';
       const ticketId = addBooking({
-        deviceType: 'Laptop', deviceModel: 'Device',
+        deviceType: deviceLabel,
+        deviceModel: deviceModel || deviceLabel,
         issueDescription: issueDescription || 'General repair service',
-        bookedDate: selectedDate, totalCost: calculateTotal(),
-        services: serviceNames, timeSlot: selectedTimeSlot,
+        bookedDate: selectedDate,
+        totalCost: calculateTotal(),
+        services: serviceNames,
+        timeSlot: selectedTimeSlot,
         customerName, customerEmail, customerPhone,
       });
       setBookingTicketId(ticketId);
-      try { await api.post('/repairs/book', {
-        date: selectedDate, timeSlot: selectedTimeSlot, deviceType: 'Laptop',
-        issueDescription, customerName, customerEmail, customerPhone,
-        totalAmount: calculateTotal(),
-      }); } catch { /* local save succeeded */ }
+      try {
+        await api.post('/repairs/book', {
+          date: selectedDate,
+          timeSlot: selectedTimeSlot,
+          deviceType: deviceLabel,
+          deviceModel,
+          images: imageUrls,
+          services: serviceNames,
+          issueDescription,
+          customerName, customerEmail, customerPhone,
+          totalAmount: calculateTotal(),
+          requestType: isQuoteRequest() ? 'quote' : 'booking',
+        });
+      } catch { /* local save succeeded */ }
       setBookingSuccess(true);
     } catch { setError('Failed to create booking.'); } finally { setIsLoading(false); }
   };
 
   const resetForm = () => {
-    setStep(1); setSelectedDate(''); setSelectedTimeSlot(''); setSelectedCategory('all');
-    setSelectedServices([]); setIssueDescription(''); setBookingSuccess(false);
+    setStep(1); setSelectedDate(''); setSelectedTimeSlot('');
+    setSelectedDevice(null); setSelectedCategory('all');
+    setSelectedServices([]); setDeviceModel(''); setIssueDescription('');
+    setImageUrls([]); setBookingSuccess(false);
     setBookingTicketId(''); setError(null);
   };
 
   /* ─── Success Screen ─────────────────────────────────────── */
   if (bookingSuccess) {
+    const rangeNote = hasQuoteService();
     return (
       <div className="min-h-screen bg-black pt-24 pb-16">
         <div className="max-w-2xl mx-auto px-6">
           <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }} className="text-center"
           >
-            {/* Success icon */}
             <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}
               transition={{ type: 'spring', stiffness: 200, delay: 0.2 }}
               className="w-20 h-20 border-2 border-white flex items-center justify-center mx-auto mb-10"
@@ -258,13 +486,18 @@ const RepairBooking: React.FC = () => {
               <Check className="w-8 h-8 text-white" strokeWidth={1.5} />
             </motion.div>
 
-            <h1 className="text-4xl font-light text-white tracking-tight mb-3">Booking Confirmed</h1>
-            <p className="text-white/40 mb-2">Your repair appointment has been scheduled.</p>
+            <h1 className="text-4xl font-light text-white tracking-tight mb-3">
+              {rangeNote ? 'Quote Requested' : 'Booking Confirmed'}
+            </h1>
+            <p className="text-white/40 mb-2">
+              {rangeNote
+                ? 'We\'ll send your final price by SMS, email and a web notification. Open the notification to confirm and book.'
+                : 'Your repair appointment has been scheduled. You\'ll receive a confirmation by SMS and email.'}
+            </p>
             <p className="text-sm font-mono text-white/60 mb-10">Ticket: {bookingTicketId}</p>
 
-            {/* Details card */}
             <div className="border border-white/10 p-8 text-left mb-10">
-              <h3 className="text-sm font-mono text-white/40 uppercase tracking-wider mb-6">Appointment Details</h3>
+              <h3 className="text-sm font-mono text-white/40 uppercase tracking-wider mb-6">Request Details</h3>
               <div className="grid grid-cols-2 gap-6 mb-6">
                 <div>
                   <p className="text-[10px] text-white/30 uppercase tracking-wider mb-1">Date</p>
@@ -274,22 +507,38 @@ const RepairBooking: React.FC = () => {
                   <p className="text-[10px] text-white/30 uppercase tracking-wider mb-1">Time</p>
                   <p className="text-white font-light">{selectedTimeSlot}</p>
                 </div>
+                <div>
+                  <p className="text-[10px] text-white/30 uppercase tracking-wider mb-1">Device</p>
+                  <p className="text-white font-light capitalize">{selectedDevice}{deviceModel ? ` · ${deviceModel}` : ''}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-white/30 uppercase tracking-wider mb-1">Estimate</p>
+                  <p className="text-white font-light">
+                    {rangeNote ? 'Pending quote' : `Rs. ${formatPrice(calculateTotal())}`}
+                  </p>
+                </div>
               </div>
 
               <div className="border-t border-white/5 pt-6">
                 <p className="text-[10px] text-white/30 uppercase tracking-wider mb-4">Services</p>
-                {getSelectedServiceObjects().map(s => (
-                  <div key={s.id} className="flex justify-between py-2 border-b border-white/5 last:border-0">
-                    <span className="text-white/70 text-sm">{s.name}</span>
-                    <span className="text-white text-sm font-mono">Rs. {formatPrice(s.price)}</span>
-                  </div>
-                ))}
-                <div className="flex justify-between pt-4 mt-2">
-                  <span className="text-white font-medium">Total</span>
-                  <span className="text-white font-medium text-lg">Rs. {formatPrice(calculateTotal())}</span>
-                </div>
+                {getSelectedServiceObjects().map(s => {
+                  const pd = getPriceDisplay(s);
+                  return (
+                    <div key={s.id} className="flex justify-between py-2 border-b border-white/5 last:border-0">
+                      <span className="text-white/70 text-sm">{s.name}</span>
+                      <span className="text-white text-sm font-mono">{pd.label}</span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
+
+            {rangeNote && (
+              <p className="text-xs text-white/40 mb-6 max-w-md mx-auto">
+                You'll receive a notification and an email at <span className="text-white/70">{customerEmail}</span> as
+                soon as the shop confirms the exact repair price.
+              </p>
+            )}
 
             <div className="flex gap-4 justify-center">
               <button onClick={resetForm}
@@ -324,14 +573,14 @@ const RepairBooking: React.FC = () => {
             </h1>
             <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5 }} className="text-sm text-white/40 mt-6 max-w-lg"
-            >Select your services and preferred time. We'll take care of the rest.</motion.p>
+            >Pick a date, tell us about your device, and we'll send you a quote.</motion.p>
           </motion.div>
         </div>
       </section>
 
       {/* Progress Steps */}
       <section className="pb-12">
-        <div className="container mx-auto px-4 lg:px-6 max-w-4xl">
+        <div className="container mx-auto px-4 lg:px-6 max-w-5xl">
           <div className="flex items-center justify-between">
             {STEPS.map((s, i) => (
               <React.Fragment key={s.num}>
@@ -348,7 +597,7 @@ const RepairBooking: React.FC = () => {
                     step >= s.num ? 'text-white/60' : 'text-white/20'
                   }`}>{s.label}</span>
                 </motion.div>
-                {i < 3 && (
+                {i < STEPS.length - 1 && (
                   <div className="flex-1 mx-3">
                     <div className="h-px relative bg-white/5">
                       <motion.div className="absolute inset-y-0 left-0 bg-white"
@@ -369,13 +618,13 @@ const RepairBooking: React.FC = () => {
       <section className="pb-20">
         <div className="container mx-auto px-4 lg:px-6 max-w-5xl">
           <AnimatePresence mode="wait">
-            {/* ── Step 1: Date & Time ─────────────────────────── */}
+
+            {/* ── Step 1: Date & Time ───────────────────────────── */}
             {step === 1 && (
               <motion.div key="s1" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -30 }} transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
                 className="space-y-12"
               >
-                {/* Date */}
                 <div>
                   <div className="flex items-center gap-3 mb-6">
                     <Calendar className="w-4 h-4 text-white/30" />
@@ -405,7 +654,6 @@ const RepairBooking: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Time */}
                 {selectedDate && (
                   <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
                     <div className="flex items-center gap-3 mb-6">
@@ -436,28 +684,6 @@ const RepairBooking: React.FC = () => {
                   </motion.div>
                 )}
 
-                {/* Shop hours */}
-                <div className="border border-white/5 p-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <Clock className="w-4 h-4 text-white/20" />
-                    <span className="text-xs font-mono text-white/30 uppercase tracking-wider">Shop Hours</span>
-                  </div>
-                  <div className="grid grid-cols-3 gap-6 text-sm">
-                    <div>
-                      <p className="text-white/30 text-xs mb-1">Mon - Fri</p>
-                      <p className="text-white/60 font-light">9AM - 6PM</p>
-                    </div>
-                    <div>
-                      <p className="text-white/30 text-xs mb-1">Saturday</p>
-                      <p className="text-white/60 font-light">10AM - 4PM</p>
-                    </div>
-                    <div>
-                      <p className="text-white/30 text-xs mb-1">Sunday</p>
-                      <p className="text-white/30 font-light">Closed</p>
-                    </div>
-                  </div>
-                </div>
-
                 <div className="flex justify-end">
                   <button onClick={() => setStep(2)} disabled={!selectedDate || !selectedTimeSlot}
                     className="group flex items-center gap-3 px-8 py-4 bg-white text-black text-sm font-medium disabled:opacity-20 disabled:cursor-not-allowed transition-opacity"
@@ -468,36 +694,92 @@ const RepairBooking: React.FC = () => {
               </motion.div>
             )}
 
-            {/* ── Step 2: Services ──────────────────────────────── */}
+            {/* ── Step 2: Device ─────────────────────────────── */}
             {step === 2 && (
               <motion.div key="s2" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -30 }} transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
                 className="space-y-10"
               >
-                {/* Category pills */}
-                <div className="flex flex-wrap gap-2">
-                  {serviceCategories.map(cat => (
-                    <button key={cat.id} onClick={() => setSelectedCategory(cat.id)}
-                      className={`px-5 py-2.5 text-xs font-medium tracking-wide transition-all duration-300 ${
-                        selectedCategory === cat.id
-                          ? 'bg-white text-black' : 'border border-white/10 text-white/50 hover:border-white/30 hover:text-white'
-                      }`}
-                    >{cat.name}</button>
-                  ))}
+                <div>
+                  <h3 className="text-lg font-light text-white mb-2">What needs fixing?</h3>
+                  <p className="text-white/40 text-sm">Pick the type of device you'd like to repair.</p>
                 </div>
 
-                {/* Services grid */}
+                <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
+                  {DEVICE_OPTIONS.map((opt, i) => {
+                    const Icon = opt.icon;
+                    const active = selectedDevice === opt.id;
+                    return (
+                      <motion.button key={opt.id}
+                        initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: i * 0.06 }}
+                        onClick={() => { setSelectedDevice(opt.id); setSelectedCategory('all'); setSelectedServices([]); }}
+                        className={`p-8 border text-left transition-all duration-300 ${
+                          active ? 'bg-white text-black border-white' : 'border-white/10 hover:border-white/30 text-white'
+                        }`}
+                      >
+                        <Icon className="w-8 h-8 mb-6" strokeWidth={1.5} />
+                        <div className="text-xl font-light mb-1">{opt.label}</div>
+                        <div className={`text-xs ${active ? 'text-black/60' : 'text-white/40'}`}>{opt.blurb}</div>
+                      </motion.button>
+                    );
+                  })}
+                </div>
+
+                <div className="flex justify-between">
+                  <button onClick={() => setStep(1)}
+                    className="flex items-center gap-3 px-8 py-4 border border-white/10 text-white text-sm font-medium hover:bg-white/5 transition-colors"
+                  ><ArrowLeft className="w-4 h-4" /> Back</button>
+                  <button onClick={() => setStep(3)} disabled={!selectedDevice}
+                    className="group flex items-center gap-3 px-8 py-4 bg-white text-black text-sm font-medium disabled:opacity-20 disabled:cursor-not-allowed transition-opacity"
+                  >Continue <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" /></button>
+                </div>
+              </motion.div>
+            )}
+
+            {/* ── Step 3: Services ──────────────────────────────── */}
+            {step === 3 && (
+              <motion.div key="s3" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -30 }} transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                className="space-y-10"
+              >
+                <div className="flex items-center justify-between flex-wrap gap-3">
+                  <div>
+                    <h3 className="text-lg font-light text-white capitalize">
+                      {selectedDevice} repair services
+                    </h3>
+                    <p className="text-white/40 text-xs mt-1">
+                      Some services show a price range. The final price is confirmed after inspection.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Category pills */}
+                {categories.length > 1 && (
+                  <div className="flex flex-wrap gap-2">
+                    {categories.map(cat => (
+                      <button key={cat.slug} onClick={() => setSelectedCategory(cat.slug)}
+                        className={`px-5 py-2.5 text-xs font-medium tracking-wide transition-all duration-300 capitalize ${
+                          selectedCategory === cat.slug
+                            ? 'bg-white text-black' : 'border border-white/10 text-white/50 hover:border-white/30 hover:text-white'
+                        }`}
+                      >{cat.name}</button>
+                    ))}
+                  </div>
+                )}
+
                 {servicesLoading ? (
                   <div className="flex justify-center py-20">
                     <motion.div className="w-10 h-10 border border-white/20 border-t-white"
                       animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }} />
                   </div>
                 ) : filteredServices.length === 0 ? (
-                  <p className="text-center text-white/30 py-20">No services found.</p>
+                  <p className="text-center text-white/30 py-20">No services found for this device yet.</p>
                 ) : (
                   <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
                     {filteredServices.map((service, i) => {
                       const isSelected = selectedServices.includes(service.id);
+                      const pd = getPriceDisplay(service);
                       return (
                         <motion.div key={service.id}
                           initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }}
@@ -507,14 +789,12 @@ const RepairBooking: React.FC = () => {
                             isSelected ? 'border-white bg-white/[0.03]' : 'border-white/10 hover:border-white/25'
                           }`}
                         >
-                          {/* Selection indicator */}
                           <div className={`absolute top-4 right-4 w-5 h-5 flex items-center justify-center transition-all duration-300 ${
                             isSelected ? 'bg-white' : 'border border-white/20'
                           }`}>
                             {isSelected && <Check className="w-3 h-3 text-black" />}
                           </div>
 
-                          {/* Image */}
                           {service.image && (
                             <div className="h-32 mb-4 overflow-hidden bg-white/[0.02]"
                               style={{ backgroundImage: `url(${service.image})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
@@ -527,8 +807,10 @@ const RepairBooking: React.FC = () => {
                           <p className="text-white/30 text-xs mb-4 line-clamp-2 leading-relaxed">{service.description}</p>
 
                           <div className="flex items-center justify-between">
-                            <span className="text-white font-mono text-sm">Rs. {formatPrice(service.price)}</span>
-                            <span className="text-[10px] text-white/20 uppercase tracking-wider">{service.serviceType || 'Service'}</span>
+                            <span className="text-white font-mono text-sm">{pd.label}</span>
+                            <span className="text-[10px] text-white/20 uppercase tracking-wider">
+                              {pd.mode === 'fixed' ? 'Fixed' : pd.mode === 'range' ? 'Estimate' : 'Quote'}
+                            </span>
                           </div>
                         </motion.div>
                       );
@@ -545,34 +827,34 @@ const RepairBooking: React.FC = () => {
                       <span className="text-xs font-mono text-white/40 uppercase tracking-wider">
                         Selected ({selectedServices.length})
                       </span>
-                      <span className="text-white font-mono">Rs. {formatPrice(calculateTotal())}</span>
+                      <span className="text-white font-mono">
+                        {hasQuoteService() ? 'Quote pending' : `Rs. ${formatPrice(calculateTotal())}`}
+                      </span>
                     </div>
                     <div className="space-y-2">
                       {getSelectedServiceObjects().map(s => {
+                        const pd = getPriceDisplay(s);
+                        const needsPart = serviceNeedsPart(s);
                         const part = selectedParts[s.id];
-                        const cfg = detectPartConfig({ name: s.name, price: normalizePrice(s.price), serviceType: s.serviceType, compatibility: (s as any).compatibility });
                         return (
                           <div key={s.id} className="py-2 border-b border-white/5 last:border-0">
                             <div className="flex justify-between">
                               <span className="text-white/60 text-sm">{s.name}</span>
-                              <span className="text-white/40 text-sm font-mono">Rs. {formatPrice(s.price)}</span>
+                              <span className="text-white/40 text-sm font-mono">{pd.label}</span>
                             </div>
-                            {cfg && (
+                            {needsPart && (
                               <div className="mt-2 pl-3 border-l border-white/10 text-xs">
-                                {part?.laptop && (
-                                  <div className="text-white/40">For: <span className="text-white/70">{part.laptop.brand} {part.laptop.name}</span></div>
-                                )}
-                                {part?.product && (
-                                  <div className="flex justify-between text-white/40 mt-0.5">
+                                {part?.product ? (
+                                  <div className="flex justify-between text-white/50">
                                     <span>↳ {part.product.name}</span>
                                     <span className="font-mono">Rs. {formatPrice(part.product.price)}</span>
                                   </div>
+                                ) : (
+                                  <div className="text-amber-300/80">Part required. Pick one from our inventory.</div>
                                 )}
                                 <button onClick={() => openPartPicker(s)}
                                   className="text-[10px] uppercase tracking-wider text-white/50 hover:text-white mt-1"
-                                >
-                                  {part?.product || part?.laptop ? 'Change selection' : 'Select part'}
-                                </button>
+                                >{part?.product ? 'Change part' : 'Select part'}</button>
                               </div>
                             )}
                           </div>
@@ -582,105 +864,176 @@ const RepairBooking: React.FC = () => {
                   </motion.div>
                 )}
 
-                {/* Email quote on services step */}
-                {selectedServices.length > 0 && (
-                  <div className="flex justify-end">
-                    <EmailQuoteButton
-                      type="repair"
-                      items={buildQuoteItems()}
-                      total={calculateTotal()}
-                      defaultEmail={customerEmail}
-                      defaultName={customerName}
-                      meta={{ Date: selectedDate || undefined, Time: selectedTimeSlot || undefined }}
-                      notes={issueDescription || undefined}
-                      label="Email me this quote"
-                    />
-                  </div>
-                )}
-
-                {/* Notes */}
-                <div>
-                  <h3 className="text-sm font-light text-white/50 mb-3">Additional Notes</h3>
-                  <textarea value={issueDescription} onChange={e => setIssueDescription(e.target.value)}
-                    placeholder="Describe your issue or special requirements..."
-                    className="w-full h-28 bg-transparent border border-white/10 p-4 text-white text-sm placeholder-white/20 focus:border-white/30 focus:outline-none resize-none transition-colors"
-                  />
-                </div>
-
-                <div className="flex justify-between">
-                  <button onClick={() => setStep(1)}
-                    className="flex items-center gap-3 px-8 py-4 border border-white/10 text-white text-sm font-medium hover:bg-white/5 transition-colors"
-                  ><ArrowLeft className="w-4 h-4" /> Back</button>
-                  <button onClick={() => setStep(3)} disabled={selectedServices.length === 0}
-                    className="group flex items-center gap-3 px-8 py-4 bg-white text-black text-sm font-medium disabled:opacity-20 disabled:cursor-not-allowed transition-opacity"
-                  >Continue <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" /></button>
-                </div>
-              </motion.div>
-            )}
-
-            {/* ── Step 3: Contact Info ─────────────────────────── */}
-            {step === 3 && (
-              <motion.div key="s3" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -30 }} transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-                className="space-y-10 max-w-2xl mx-auto"
-              >
-                <div>
-                  <h3 className="text-lg font-light text-white mb-8">Contact Information</h3>
-                  <div className="space-y-6">
-                    <div>
-                      <div className="flex items-center gap-3 mb-3">
-                        <User className="w-3.5 h-3.5 text-white/20" />
-                        <label className="text-xs text-white/30 uppercase tracking-wider">Full Name</label>
-                      </div>
-                      <input type="text" value={customerName} onChange={e => setCustomerName(e.target.value)}
-                        placeholder="Deshan Dinidu"
-                        className="w-full py-4 bg-transparent border-b border-white/10 text-white text-sm placeholder-white/20 focus:border-white/40 focus:outline-none transition-colors"
-                      />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-3 mb-3">
-                        <Mail className="w-3.5 h-3.5 text-white/20" />
-                        <label className="text-xs text-white/30 uppercase tracking-wider">Email</label>
-                      </div>
-                      <input type="email" value={customerEmail} onChange={e => setCustomerEmail(e.target.value)}
-                        placeholder="deshandinidu@gmail.com"
-                        className="w-full py-4 bg-transparent border-b border-white/10 text-white text-sm placeholder-white/20 focus:border-white/40 focus:outline-none transition-colors"
-                      />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-3 mb-3">
-                        <Phone className="w-3.5 h-3.5 text-white/20" />
-                        <label className="text-xs text-white/30 uppercase tracking-wider">Phone</label>
-                      </div>
-                      <input type="tel" value={customerPhone} onChange={e => setCustomerPhone(e.target.value)}
-                        placeholder="+94 77 343 9842"
-                        className="w-full py-4 bg-transparent border-b border-white/10 text-white text-sm placeholder-white/20 focus:border-white/40 focus:outline-none transition-colors"
-                      />
-                    </div>
-                  </div>
-                </div>
-
                 <div className="flex justify-between">
                   <button onClick={() => setStep(2)}
                     className="flex items-center gap-3 px-8 py-4 border border-white/10 text-white text-sm font-medium hover:bg-white/5 transition-colors"
                   ><ArrowLeft className="w-4 h-4" /> Back</button>
-                  <button onClick={() => setStep(4)} disabled={!customerName || !customerEmail || !customerPhone}
+                  <button onClick={() => setStep(4)} disabled={selectedServices.length === 0 || getSelectedServiceObjects().some(s => serviceNeedsPart(s) && !selectedParts[s.id]?.product)}
                     className="group flex items-center gap-3 px-8 py-4 bg-white text-black text-sm font-medium disabled:opacity-20 disabled:cursor-not-allowed transition-opacity"
                   >Continue <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" /></button>
                 </div>
               </motion.div>
             )}
 
-            {/* ── Step 4: Confirm ───────────────────────────────── */}
-            {step === 4 && (
-              <motion.div key="s4" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }}
+            {/* ── Step 4: Details (quote flow) or Contact (fixed flow) ─── */}
+            {step === 4 && isQuoteRequest() && (
+              <motion.div key="s4q" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -30 }} transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                className="space-y-10 max-w-2xl mx-auto"
+              >
+                <div>
+                  <h3 className="text-lg font-light text-white">Tell us about your device</h3>
+                  <p className="text-white/40 text-xs mt-2">
+                    These details help us send an accurate quote before any work begins.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="text-xs text-white/30 uppercase tracking-wider mb-3 block">Device model</label>
+                  <input type="text" value={deviceModel} onChange={e => setDeviceModel(e.target.value)}
+                    placeholder={selectedDevice === 'mobile' ? 'e.g. iPhone 13, Samsung A52' : selectedDevice === 'laptop' ? 'e.g. Asus TUF F15, MacBook Pro 14' : 'e.g. Custom build, Dell OptiPlex 7080'}
+                    className="w-full py-4 bg-transparent border-b border-white/10 text-white text-sm placeholder-white/20 focus:border-white/40 focus:outline-none transition-colors"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs text-white/30 uppercase tracking-wider mb-3 block">Describe the issue</label>
+                  <textarea value={issueDescription} onChange={e => setIssueDescription(e.target.value)}
+                    placeholder="What's wrong? When did it start? Any visible damage?"
+                    className="w-full h-28 bg-transparent border border-white/10 p-4 text-white text-sm placeholder-white/20 focus:border-white/30 focus:outline-none resize-none transition-colors"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs text-white/30 uppercase tracking-wider mb-3 block">Photos (optional)</label>
+                  <label className="flex items-center justify-center gap-3 border border-dashed border-white/15 hover:border-white/30 py-6 cursor-pointer transition-colors">
+                    <Upload className="w-4 h-4 text-white/40" />
+                    <span className="text-sm text-white/50">
+                      {uploading ? 'Uploading…' : 'Click to upload photos of the device / damage'}
+                    </span>
+                    <input type="file" accept="image/*" multiple className="hidden"
+                      onChange={e => { handleFiles(e.target.files); e.target.value = ''; }}
+                    />
+                  </label>
+                  {imageUrls.length > 0 && (
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-3">
+                      {imageUrls.map(url => (
+                        <div key={url} className="relative group aspect-square border border-white/10 overflow-hidden">
+                          <img src={url} alt="repair upload" className="w-full h-full object-cover" />
+                          <button onClick={() => removeImage(url)}
+                            className="absolute top-1 right-1 w-6 h-6 bg-black/80 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                            aria-label="Remove image"
+                          ><X className="w-3 h-3" /></button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-6 pt-2">
+                  <div>
+                    <div className="flex items-center gap-3 mb-3">
+                      <User className="w-3.5 h-3.5 text-white/20" />
+                      <label className="text-xs text-white/30 uppercase tracking-wider">Full Name</label>
+                    </div>
+                    <input type="text" value={customerName} onChange={e => setCustomerName(e.target.value)}
+                      className="w-full py-4 bg-transparent border-b border-white/10 text-white text-sm placeholder-white/20 focus:border-white/40 focus:outline-none transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-3 mb-3">
+                      <Mail className="w-3.5 h-3.5 text-white/20" />
+                      <label className="text-xs text-white/30 uppercase tracking-wider">Email</label>
+                    </div>
+                    <input type="email" value={customerEmail} onChange={e => setCustomerEmail(e.target.value)}
+                      className="w-full py-4 bg-transparent border-b border-white/10 text-white text-sm placeholder-white/20 focus:border-white/40 focus:outline-none transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-3 mb-3">
+                      <Phone className="w-3.5 h-3.5 text-white/20" />
+                      <label className="text-xs text-white/30 uppercase tracking-wider">Phone</label>
+                    </div>
+                    <input type="tel" value={customerPhone} onChange={e => setCustomerPhone(e.target.value)}
+                      className="w-full py-4 bg-transparent border-b border-white/10 text-white text-sm placeholder-white/20 focus:border-white/40 focus:outline-none transition-colors"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-between">
+                  <button onClick={() => setStep(3)}
+                    className="flex items-center gap-3 px-8 py-4 border border-white/10 text-white text-sm font-medium hover:bg-white/5 transition-colors"
+                  ><ArrowLeft className="w-4 h-4" /> Back</button>
+                  <button onClick={() => setStep(5)} disabled={!customerName || !customerEmail || !customerPhone}
+                    className="group flex items-center gap-3 px-8 py-4 bg-white text-black text-sm font-medium disabled:opacity-20 disabled:cursor-not-allowed transition-opacity"
+                  >Continue <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" /></button>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Fixed-price flow: contact-only step 4 */}
+            {step === 4 && !isQuoteRequest() && (
+              <motion.div key="s4f" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -30 }} transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                className="space-y-10 max-w-2xl mx-auto"
+              >
+                <div>
+                  <h3 className="text-lg font-light text-white">Contact Information</h3>
+                  <p className="text-white/40 text-xs mt-2">
+                    Fixed-price services. We'll confirm your appointment right after you submit.
+                  </p>
+                </div>
+
+                <div className="space-y-6">
+                  <div>
+                    <div className="flex items-center gap-3 mb-3">
+                      <User className="w-3.5 h-3.5 text-white/20" />
+                      <label className="text-xs text-white/30 uppercase tracking-wider">Full Name</label>
+                    </div>
+                    <input type="text" value={customerName} onChange={e => setCustomerName(e.target.value)}
+                      className="w-full py-4 bg-transparent border-b border-white/10 text-white text-sm placeholder-white/20 focus:border-white/40 focus:outline-none transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-3 mb-3">
+                      <Mail className="w-3.5 h-3.5 text-white/20" />
+                      <label className="text-xs text-white/30 uppercase tracking-wider">Email</label>
+                    </div>
+                    <input type="email" value={customerEmail} onChange={e => setCustomerEmail(e.target.value)}
+                      className="w-full py-4 bg-transparent border-b border-white/10 text-white text-sm placeholder-white/20 focus:border-white/40 focus:outline-none transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-3 mb-3">
+                      <Phone className="w-3.5 h-3.5 text-white/20" />
+                      <label className="text-xs text-white/30 uppercase tracking-wider">Phone</label>
+                    </div>
+                    <input type="tel" value={customerPhone} onChange={e => setCustomerPhone(e.target.value)}
+                      className="w-full py-4 bg-transparent border-b border-white/10 text-white text-sm placeholder-white/20 focus:border-white/40 focus:outline-none transition-colors"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-between">
+                  <button onClick={() => setStep(3)}
+                    className="flex items-center gap-3 px-8 py-4 border border-white/10 text-white text-sm font-medium hover:bg-white/5 transition-colors"
+                  ><ArrowLeft className="w-4 h-4" /> Back</button>
+                  <button onClick={() => setStep(5)} disabled={!customerName || !customerEmail || !customerPhone}
+                    className="group flex items-center gap-3 px-8 py-4 bg-white text-black text-sm font-medium disabled:opacity-20 disabled:cursor-not-allowed transition-opacity"
+                  >Continue <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" /></button>
+                </div>
+              </motion.div>
+            )}
+
+            {/* ── Step 5: Confirm ───────────────────────────────── */}
+            {step === 5 && (
+              <motion.div key="s5" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -30 }} transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
                 className="space-y-10 max-w-3xl mx-auto"
               >
-                <h3 className="text-lg font-light text-white">Review Booking</h3>
+                <h3 className="text-lg font-light text-white">Review Request</h3>
 
                 <div className="border border-white/10 divide-y divide-white/5">
-                  {/* Date & Time */}
                   <div className="p-6 grid grid-cols-2 gap-6">
                     <div>
                       <p className="text-[10px] text-white/30 uppercase tracking-wider mb-1">Date</p>
@@ -690,58 +1043,69 @@ const RepairBooking: React.FC = () => {
                       <p className="text-[10px] text-white/30 uppercase tracking-wider mb-1">Time</p>
                       <p className="text-white font-light">{selectedTimeSlot}</p>
                     </div>
+                    <div>
+                      <p className="text-[10px] text-white/30 uppercase tracking-wider mb-1">Device</p>
+                      <p className="text-white font-light capitalize">{selectedDevice}{deviceModel ? ` · ${deviceModel}` : ''}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-white/30 uppercase tracking-wider mb-1">Estimate</p>
+                      <p className="text-white font-light">
+                        {hasQuoteService() ? 'Pending quote' : `Rs. ${formatPrice(calculateTotal())}`}
+                      </p>
+                    </div>
                   </div>
 
-                  {/* Contact */}
                   <div className="p-6">
                     <p className="text-[10px] text-white/30 uppercase tracking-wider mb-2">Contact</p>
                     <p className="text-white font-light">{customerName}</p>
                     <p className="text-white/40 text-sm">{customerEmail} • {customerPhone}</p>
                   </div>
 
-                  {/* Services */}
                   <div className="p-6">
                     <p className="text-[10px] text-white/30 uppercase tracking-wider mb-4">Services</p>
                     {getSelectedServiceObjects().map(s => {
-                      const part = selectedParts[s.id];
+                      const pd = getPriceDisplay(s);
                       return (
-                        <div key={s.id} className="py-2.5 border-b border-white/5 last:border-0">
-                          <div className="flex justify-between">
-                            <span className="text-white/70 text-sm">{s.name}</span>
-                            <span className="text-white text-sm font-mono">Rs. {formatPrice(s.price)}</span>
-                          </div>
-                          {part?.laptop && (
-                            <p className="text-xs text-white/40 mt-1">For: {part.laptop.brand} {part.laptop.name}</p>
-                          )}
-                          {part?.product && (
-                            <div className="flex justify-between text-xs text-white/50 mt-1">
-                              <span>↳ {part.product.name}</span>
-                              <span className="font-mono">Rs. {formatPrice(part.product.price)}</span>
-                            </div>
-                          )}
+                        <div key={s.id} className="flex justify-between py-2.5 border-b border-white/5 last:border-0">
+                          <span className="text-white/70 text-sm">{s.name}</span>
+                          <span className="text-white text-sm font-mono">{pd.label}</span>
                         </div>
                       );
                     })}
-                    <div className="flex justify-between pt-4 mt-2">
-                      <span className="text-white font-medium">Total</span>
-                      <span className="text-white font-medium text-xl">Rs. {formatPrice(calculateTotal())}</span>
-                    </div>
                   </div>
+
+                  {imageUrls.length > 0 && (
+                    <div className="p-6">
+                      <p className="text-[10px] text-white/30 uppercase tracking-wider mb-3">Photos</p>
+                      <div className="flex flex-wrap gap-2">
+                        {imageUrls.map(url => (
+                          <img key={url} src={url} alt="" className="w-16 h-16 object-cover border border-white/10" />
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {issueDescription && (
                     <div className="p-6">
-                      <p className="text-[10px] text-white/30 uppercase tracking-wider mb-2">Notes</p>
-                      <p className="text-white/50 text-sm">{issueDescription}</p>
+                      <p className="text-[10px] text-white/30 uppercase tracking-wider mb-2">Issue</p>
+                      <p className="text-white/50 text-sm whitespace-pre-line">{issueDescription}</p>
                     </div>
                   )}
                 </div>
+
+                {hasQuoteService() && (
+                  <div className="border border-white/10 bg-white/[0.02] p-4 text-xs text-white/60">
+                    One or more selected services show a price range. The shop will inspect your device and
+                    send a final price by email and as a web notification before any work begins.
+                  </div>
+                )}
 
                 {error && (
                   <div className="border border-white/10 p-4 text-white/60 text-sm">{error}</div>
                 )}
 
                 <div className="flex justify-between items-center flex-wrap gap-3">
-                  <button onClick={() => setStep(3)}
+                  <button onClick={() => setStep(4)}
                     className="flex items-center gap-3 px-8 py-4 border border-white/10 text-white text-sm font-medium hover:bg-white/5 transition-colors"
                   ><ArrowLeft className="w-4 h-4" /> Back</button>
                   <div className="flex items-center gap-2 flex-wrap">
@@ -751,53 +1115,30 @@ const RepairBooking: React.FC = () => {
                       total={calculateTotal()}
                       defaultEmail={customerEmail}
                       defaultName={customerName}
-                      meta={{ Date: selectedDate || undefined, Time: selectedTimeSlot || undefined, Phone: customerPhone || undefined }}
+                      meta={{ Date: selectedDate || undefined, Time: selectedTimeSlot || undefined, Phone: customerPhone || undefined, Device: deviceModel || undefined }}
                       notes={issueDescription || undefined}
                       label="Email me this quote"
                     />
-                  <button onClick={handleSubmit} disabled={isLoading}
-                    className="group flex items-center gap-3 px-10 py-4 bg-white text-black text-sm font-medium disabled:opacity-50 transition-opacity"
-                  >
-                    {isLoading ? (
-                      <><motion.div className="w-4 h-4 border-2 border-black border-t-transparent"
-                        animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                      /> Booking...</>
-                    ) : (
-                      <>Confirm Booking <Check className="w-4 h-4" /></>
-                    )}
-                  </button>
+                    <button onClick={handleSubmit} disabled={isLoading}
+                      className="group flex items-center gap-3 px-10 py-4 bg-white text-black text-sm font-medium disabled:opacity-50 transition-opacity"
+                    >
+                      {isLoading ? (
+                        <><motion.div className="w-4 h-4 border-2 border-black border-t-transparent"
+                          animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                        /> Submitting…</>
+                      ) : (
+                        <>{isQuoteRequest() ? 'Request Quote' : 'Confirm Booking'} <Check className="w-4 h-4" /></>
+                      )}
+                    </button>
                   </div>
                 </div>
               </motion.div>
             )}
+
           </AnimatePresence>
         </div>
       </section>
 
-      {/* ── Info Footer ──────────────────────────────────────── */}
-      <section className="py-20 bg-black border-t border-white/5">
-        <div className="container mx-auto px-4 lg:px-6">
-          <div className="grid md:grid-cols-3 gap-1">
-            {[
-              { icon: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>, title: 'Expert Technicians', desc: 'Certified professionals with years of experience' },
-              { icon: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>, title: 'Fast Turnaround', desc: 'Most repairs completed within 24-48 hours' },
-              { icon: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m7.268-4.394a1.5 1.5 0 10-2.122-2.122l-.841.84-.172-.172a1.5 1.5 0 10-2.122 2.122l3.264 3.264a1.5 1.5 0 002.122 0l3.071-3.071zM12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>, title: '90-Day Warranty', desc: 'All repairs covered by our service warranty' },
-            ].map((item, i) => (
-              <motion.div key={i}
-                initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }} transition={{ delay: i * 0.1 }}
-                className="group p-10 border border-white/5 hover:border-white/15 transition-all duration-700"
-              >
-                <div className="text-3xl mb-6">{item.icon}</div>
-                <h4 className="text-white font-medium text-sm mb-2 tracking-tight">{item.title}</h4>
-                <p className="text-white/30 text-xs leading-relaxed">{item.desc}</p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Part picker modal */}
       {pickerService && (
         <RepairPartPicker
           open={!!pickerService}

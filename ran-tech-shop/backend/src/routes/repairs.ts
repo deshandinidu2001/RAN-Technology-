@@ -13,6 +13,8 @@ import {
   getRepairReviews,
   createRepairReview,
   getRepairServices,
+  sendBookingQuote,
+  acceptQuote,
 } from '../controllers/repairController';
 import { authenticate, optionalAuth } from '../middleware/auth';
 
@@ -24,6 +26,7 @@ router.post('/book', createBooking);
 router.get('/my-bookings', getBookingsByEmail);
 router.get('/booking/:id', getBookingById);
 router.post('/booking/:id/cancel', cancelBooking);
+router.post('/booking/:id/accept', acceptQuote);
 
 // Reviews routes
 router.get('/reviews', getRepairReviews);
@@ -35,6 +38,7 @@ router.get('/services', getRepairServices);
 // Protected routes (admin only)
 router.get('/admin/bookings', optionalAuth, getAllBookings);
 router.patch('/admin/booking/:id', optionalAuth, updateBookingStatus);
+router.post('/admin/booking/:id/quote', optionalAuth, sendBookingQuote);
 router.delete('/admin/booking/:id', optionalAuth, deleteBooking);
 router.post('/admin/availability', authenticate, setAvailability);
 router.get('/admin/statistics', optionalAuth, getStatistics);

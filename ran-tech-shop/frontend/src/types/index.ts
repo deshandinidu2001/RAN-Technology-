@@ -55,6 +55,18 @@ export interface Product {
   // Service fields
   isService?: boolean;
   serviceType?: string;
+  // Repair-service targeting + pricing range
+  deviceType?: string;        // 'desktop' | 'mobile' | 'laptop'
+  priceMax?: number | null;   // optional upper bound; if null/equal to price, treated as fixed
+  priceMode?: 'fixed' | 'range' | 'quote';
+}
+
+export interface RepairCategory {
+  id: string;
+  name: string;
+  slug: string;
+  deviceType: 'desktop' | 'laptop' | 'mobile';
+  order: number;
 }
 
 export interface User {

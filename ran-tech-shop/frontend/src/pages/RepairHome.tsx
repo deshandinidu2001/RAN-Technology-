@@ -687,131 +687,54 @@ const ServicesSection = ({ navigate, services }: { navigate: (path: string) => v
 // card track translates horizontally based on scroll progress. Mobile
 // falls back to a vertical stack.
 const ProcessSection = () => {
-  const sectionRef = useRef<HTMLDivElement>(null);
-  const trackRef = useRef<HTMLDivElement>(null);
-  const { scrollYProgress } = useScroll({ target: sectionRef, offset: ['start start', 'end end'] });
-  const smoothProgress = useSpring(scrollYProgress, { stiffness: 110, damping: 28, mass: 0.45 });
-  const [trackWidth, setTrackWidth] = useState(0);
-  const [isDesktop, setIsDesktop] = useState(false);
-  const [activeIndex, setActiveIndex] = useState(0);
-
-  // Measure how far the track must translate horizontally + watch breakpoint
-  useEffect(() => {
-    const measure = () => {
-      const desktop = window.matchMedia('(min-width: 1024px)').matches;
-      setIsDesktop(desktop);
-      if (!trackRef.current) return;
-      const distance = desktop ? Math.max(0, trackRef.current.scrollWidth - window.innerWidth) : 0;
-      setTrackWidth(distance);
-    };
-    measure();
-    window.addEventListener('resize', measure);
-    return () => window.removeEventListener('resize', measure);
-  }, []);
-
-  // Drive activeIndex from progress
-  useEffect(() => {
-    const unsub = smoothProgress.on('change', (v) => {
-      setActiveIndex(Math.min(PROCESS_STEPS.length - 1, Math.floor(v * PROCESS_STEPS.length)));
-    });
-    return () => unsub();
-  }, [smoothProgress]);
-
-  const x = useTransform(smoothProgress, [0, 1], [0, -trackWidth]);
-
   return (
-    // Section height controls how much vertical scroll is consumed before the
-    // pin releases. ~300vh = 200vh of horizontal scroll travel + 100vh of pin.
-    <section ref={sectionRef} className="relative bg-black lg:h-[300vh]">
-      <div className="relative lg:sticky lg:top-0 lg:h-screen bg-black overflow-hidden flex flex-col justify-center py-16 lg:py-0">
-        <div
-          className="absolute inset-0 opacity-60 pointer-events-none"
-          style={{
-            backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.045) 1px, transparent 1px)',
-            backgroundSize: '28px 28px',
-          }}
-        />
+    <section className="relative bg-black py-24 lg:py-32 overflow-hidden">
+      <div
+        className="absolute inset-0 opacity-60 pointer-events-none"
+        style={{
+          backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.045) 1px, transparent 1px)',
+          backgroundSize: '28px 28px',
+        }}
+      />
 
-        <div className="relative z-10 w-full">
-          <div className="container mx-auto px-4 lg:px-6 mb-10 lg:mb-14">
-            <motion.div
-              initial={{ opacity: 0, y: 28 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-            >
-              <div className="flex items-center gap-4 mb-6">
-                <div className="h-px w-12 bg-white/25" />
-                <span className="text-xs font-mono tracking-[0.32em] text-white/45 uppercase">Repair Process</span>
-              </div>
-              <div className="grid lg:grid-cols-12 gap-8 lg:gap-14 items-end">
-                <h2 className="lg:col-span-6 text-4xl sm:text-5xl md:text-7xl font-light text-white tracking-tight leading-[0.95]">
-                  <RevealText>How It Works</RevealText>
-                </h2>
-                <p className="lg:col-span-4 text-sm md:text-base text-white/50 leading-relaxed max-w-xl">
-                  A clear four-step repair flow, from booking to pickup, designed to keep your device moving without confusion.
-                </p>
-              </div>
-            </motion.div>
+      <div className="relative z-10 container mx-auto px-4 lg:px-6">
+        <motion.div
+          initial={{ opacity: 0, y: 28 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+          className="mb-12 lg:mb-14"
+        >
+          <div className="flex items-center gap-4 mb-6">
+            <div className="h-px w-12 bg-white/25" />
+            <span className="text-xs font-mono tracking-[0.32em] text-white/45 uppercase">Repair Process</span>
           </div>
-
-          {/* Horizontal track on desktop, vertical stack on mobile */}
-          <div className="lg:overflow-hidden">
-            <motion.div
-              ref={trackRef}
-              style={isDesktop ? { x } : undefined}
-              className="flex flex-col lg:flex-row gap-5 lg:gap-10 px-4 lg:pl-[10vw] lg:pr-[10vw] will-change-transform"
-            >
-              {PROCESS_STEPS.map((step, i) => {
-                const isActive = i === activeIndex;
-                const isPassed = i < activeIndex;
-
-                return (
-                  <motion.div
-                    key={step.step}
-                    initial={{ opacity: 0, y: 28 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true, margin: '-80px' }}
-                    transition={{ duration: 0.5, delay: i * 0.05, ease: [0.22, 1, 0.36, 1] }}
-                    animate={{
-                      backgroundColor: isActive ? '#ffffff' : '#111111',
-                      borderColor: isActive || isPassed ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.10)',
-                      color: isActive ? '#000000' : '#ffffff',
-                    }}
-                    className={`shrink-0 w-full lg:w-[60vw] xl:w-[50vw] 2xl:w-[42vw] border p-7 md:p-10 min-h-[300px] lg:min-h-[420px] transition-shadow duration-500 ${
-                      isActive ? 'shadow-[0_24px_70px_rgba(255,255,255,0.08)]' : ''
-                    }`}
-                  >
-                    <div className="flex items-start mb-10">
-                      <div
-                        className={`h-16 w-16 flex items-center justify-center border font-mono text-2xl font-light transition-colors ${
-                          isActive ? 'border-black/20 text-black' : isPassed ? 'border-white/35 text-white' : 'border-white/15 text-white/55'
-                        }`}
-                      >
-                        {step.step}
-                      </div>
-                    </div>
-                    <p
-                      className={`text-[10px] font-mono tracking-[0.26em] uppercase mb-4 ${
-                        isActive ? 'text-black/45' : isPassed ? 'text-white/45' : 'text-white/35'
-                      }`}
-                    >
-                      {isActive ? 'Active Step' : isPassed ? 'Completed' : `Step ${step.step}`}
-                    </p>
-                    <h3 className="text-2xl md:text-3xl font-medium tracking-tight mb-4">{step.title}</h3>
-                    <p className={`text-sm leading-relaxed ${isActive ? 'text-black/58' : 'text-white/52'}`}>{step.desc}</p>
-                  </motion.div>
-                );
-              })}
-            </motion.div>
+          <div className="grid lg:grid-cols-12 gap-8 lg:gap-14 items-end">
+            <h2 className="lg:col-span-6 text-3xl sm:text-4xl md:text-5xl font-light text-white tracking-tight leading-[0.95]">
+              <RevealText>How It Works</RevealText>
+            </h2>
+            <p className="lg:col-span-5 text-sm md:text-base text-white/50 leading-relaxed max-w-xl">
+              A clear four-step repair flow, from booking to pickup, designed to keep your device moving without confusion.
+            </p>
           </div>
+        </motion.div>
 
-          {/* Scroll progress bar (desktop only) */}
-          <div className="hidden lg:block container mx-auto px-4 lg:px-6 mt-12">
-            <div className="h-px bg-white/10 overflow-hidden">
-              <motion.div className="h-full bg-white origin-left" style={{ scaleX: smoothProgress }} />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {PROCESS_STEPS.map((step) => (
+            <div
+              key={step.step}
+              className="border border-white/10 bg-[#0c0c0c] text-white hover:bg-white hover:text-black hover:border-white p-5 md:p-6 min-h-[230px] lg:min-h-[260px] flex flex-col transition-colors duration-500 group"
+            >
+              <div className="h-12 w-12 flex items-center justify-center border border-white/15 group-hover:border-black/20 font-mono text-lg font-light mb-6 transition-colors">
+                {step.step}
+              </div>
+              <p className="text-[10px] font-mono tracking-[0.26em] uppercase mb-2 text-white/35 group-hover:text-black/45 transition-colors">
+                Step {step.step}
+              </p>
+              <h3 className="text-lg md:text-xl font-medium tracking-tight mb-2">{step.title}</h3>
+              <p className="text-xs leading-relaxed text-white/55 group-hover:text-black/60 transition-colors">{step.desc}</p>
             </div>
-          </div>
+          ))}
         </div>
       </div>
     </section>

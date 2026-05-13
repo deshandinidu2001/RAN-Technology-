@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
 import { supabase } from '../lib/supabase';
+import { sendQuoteEmail } from '../utils/email';
+import { sendSms } from '../utils/sms';
 
 // Default time slots
 const defaultTimeSlots = [
@@ -69,6 +71,8 @@ export const createBooking = async (req: Request, res: Response): Promise<void> 
     const {
       date, timeSlot, deviceType, issueDescription,
       customerName, customerEmail, customerPhone, totalAmount,
+      deviceModel, images, services,
+      requestType, // 'quote' | 'booking' (default booking)
     } = req.body;
 
     if (
@@ -78,6 +82,13 @@ export const createBooking = async (req: Request, res: Response): Promise<void> 
       res.status(400).json({ error: 'All fields are required' });
       return;
     }
+
+    const imagesJson = Array.isArray(images)
+      ? JSON.stringify(images)
+      : (typeof images === 'string' ? images : null);
+    const servicesJson = Array.isArray(services)
+      ? JSON.stringify(services)
+      : (typeof services === 'string' ? services : null);
 
     const { data: existingBooking } = await supabase
       .from('RepairBooking')
@@ -98,17 +109,27 @@ export const createBooking = async (req: Request, res: Response): Promise<void> 
         date,
         timeSlot,
         deviceType,
+        deviceModel: deviceModel || null,
+        images: imagesJson,
+        services: servicesJson,
         issueDescription: issueDescription || '',
         customerName,
         customerEmail,
         customerPhone,
         estimatedCost: totalAmount || null,
-        status: 'pending',
+        requestType: requestType === 'quote' ? 'quote' : 'booking',
+        status: requestType === 'quote' ? 'quote-requested' : 'pending',
       })
       .select('*')
       .single();
 
     if (error || !booking) throw error ?? new Error('Insert returned no row');
+
+    const isQuote = requestType === 'quote';
+    const smsBody = isQuote
+      ? `RAN Tech Shop: Repair quote requested for ${deviceType}${deviceModel ? ` (${deviceModel})` : ''}. We'll send your price soon. Ref ${(booking as any).id.slice(0, 6)}.`
+      : `RAN Tech Shop: Repair booking confirmed for ${(booking as any).date} ${(booking as any).timeSlot}. Ref ${(booking as any).id.slice(0, 6)}.`;
+    sendSms(customerPhone, smsBody).catch(() => {});
 
     res.status(201).json({
       success: true,
@@ -461,10 +482,170 @@ export const createRepairReview = async (req: Request, res: Response): Promise<v
   }
 };
 
+// Admin sends a price quote for a repair booking → stores quote,
+// creates an in-app notification, and emails the customer.
+export const sendBookingQuote = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { quotedPrice, quotedPriceMax, quoteMessage } = req.body;
+
+    if (quotedPrice === undefined || quotedPrice === null || quotedPrice === '') {
+      res.status(400).json({ error: 'quotedPrice is required' });
+      return;
+    }
+    const price = parseFloat(quotedPrice);
+    if (!Number.isFinite(price) || price < 0) {
+      res.status(400).json({ error: 'quotedPrice must be a non-negative number' });
+      return;
+    }
+    let priceMax: number | null = null;
+    if (quotedPriceMax !== undefined && quotedPriceMax !== null && quotedPriceMax !== '') {
+      const n = parseFloat(quotedPriceMax);
+      if (!Number.isFinite(n) || n < price) {
+        res.status(400).json({ error: 'quotedPriceMax must be greater than or equal to quotedPrice' });
+        return;
+      }
+      priceMax = n;
+    }
+
+    const { data: existing } = await supabase
+      .from('RepairBooking')
+      .select('requestType')
+      .eq('id', id)
+      .maybeSingle();
+    const isQuoteFlow = (existing as any)?.requestType === 'quote';
+
+    const { data: booking, error: updErr } = await supabase
+      .from('RepairBooking')
+      .update({
+        quotedPrice: price,
+        quotedPriceMax: priceMax,
+        quotedAt: new Date().toISOString(),
+        quoteMessage: quoteMessage || null,
+        // Quote-flow stays pending customer acceptance; direct bookings jump to confirmed.
+        status: isQuoteFlow ? 'quote-sent' : 'confirmed',
+        estimatedCost: priceMax ?? price,
+      })
+      .eq('id', id)
+      .select('*')
+      .maybeSingle();
+
+    if (updErr) throw updErr;
+    if (!booking) {
+      res.status(404).json({ error: 'Booking not found' });
+      return;
+    }
+
+    const b: any = booking;
+    const fmt = (n: number) => `Rs. ${n.toLocaleString('en-LK')}`;
+    const priceLabel = priceMax != null && priceMax > price ? `${fmt(price)} to ${fmt(priceMax)}` : fmt(price);
+    const refId = b.serialNo ? `REP#${b.serialNo}` : b.id.slice(0, 6);
+    const title = 'Repair quote ready';
+    const body = `Your ${b.deviceType || 'device'}${b.deviceModel ? ` (${b.deviceModel})` : ''} repair quote: ${priceLabel}${quoteMessage ? `. ${quoteMessage}` : ''}`;
+
+    await supabase.from('Notification').insert({
+      email: b.customerEmail,
+      title,
+      body,
+      link: `/repair/quote/${b.id}`,
+      type: 'quote',
+      refId: b.id,
+    });
+
+    if (b.customerPhone) {
+      sendSms(b.customerPhone, `RAN Tech Shop: Repair quote ${priceLabel} for your ${b.deviceType || 'device'}. Open the link in your account to accept and book. Ref ${refId}.`).catch(() => {});
+    }
+
+    // Best-effort email — don't fail the request if SMTP is down.
+    try {
+      const frontendUrl = (process.env.FRONTEND_URL || process.env.PUBLIC_URL || '').replace(/\/$/, '');
+      const acceptUrl = frontendUrl ? `${frontendUrl}/repair/quote/${b.id}` : `/repair/quote/${b.id}`;
+      await sendQuoteEmail({
+        to: b.customerEmail,
+        customerName: b.customerName || 'Customer',
+        type: 'repair',
+        items: [{
+          name: `Repair: ${b.deviceType || 'Device'}${b.deviceModel ? ` (${b.deviceModel})` : ''}`,
+          description: priceMax != null && priceMax > price ? `Estimated ${priceLabel}` : (b.issueDescription || undefined),
+          price,
+        }],
+        subtotal: priceMax ?? price,
+        total: priceMax ?? price,
+        notes: quoteMessage || undefined,
+        meta: { Reference: refId, Date: b.date, Time: b.timeSlot, 'Confirm booking': acceptUrl },
+      });
+    } catch (e) {
+      console.warn('[repair] quote email failed', (e as Error)?.message);
+    }
+
+    res.json({ success: true, booking });
+  } catch (error) {
+    console.error('Error sending booking quote:', error);
+    res.status(500).json({ error: 'Failed to send quote' });
+  }
+};
+
+// Customer accepts a quoted price → booking moves into the live workflow.
+// POST /api/repairs/booking/:id/accept   body: { email? }
+export const acceptQuote = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { email } = req.body || {};
+
+    const { data: booking, error } = await supabase
+      .from('RepairBooking')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+    if (error) throw error;
+    if (!booking) {
+      res.status(404).json({ error: 'Booking not found' });
+      return;
+    }
+    const b: any = booking;
+    if (email && b.customerEmail !== email) {
+      res.status(403).json({ error: 'Email does not match this quote' });
+      return;
+    }
+    if (b.quotedPrice == null) {
+      res.status(400).json({ error: 'No quote has been sent yet for this request' });
+      return;
+    }
+    if (b.status !== 'quote-sent' && b.status !== 'quote-requested') {
+      res.status(400).json({ error: 'This quote is no longer pending' });
+      return;
+    }
+
+    const { data: updated, error: upErr } = await supabase
+      .from('RepairBooking')
+      .update({
+        status: 'confirmed',
+        quoteAcceptedAt: new Date().toISOString(),
+        // For a range quote, store the high end as the current estimate;
+        // the admin updates this to the actual price when the work is done.
+        actualCost: b.quotedPriceMax ?? b.quotedPrice,
+      })
+      .eq('id', id)
+      .select('*')
+      .single();
+    if (upErr) throw upErr;
+
+    sendSms(
+      b.customerPhone,
+      `RAN Tech Shop: Booking confirmed for ${b.date} ${b.timeSlot}. See you soon. Ref ${b.id.slice(0, 6)}.`,
+    ).catch(() => {});
+
+    res.json({ success: true, booking: updated });
+  } catch (error) {
+    console.error('Error accepting quote:', error);
+    res.status(500).json({ error: 'Failed to accept quote' });
+  }
+};
+
 // Get repair services from products (items that are services)
 export const getRepairServices = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { serviceType } = req.query;
+    const { serviceType, deviceType } = req.query;
 
     let query = supabase
       .from('Product')
@@ -474,6 +655,9 @@ export const getRepairServices = async (req: Request, res: Response): Promise<vo
 
     if (serviceType && typeof serviceType === 'string') {
       query = query.eq('serviceType', serviceType);
+    }
+    if (deviceType && typeof deviceType === 'string') {
+      query = query.eq('deviceType', deviceType);
     }
 
     const { data, error } = await query;

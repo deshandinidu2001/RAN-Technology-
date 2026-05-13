@@ -1,8 +1,134 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Check, Loader2, Search } from 'lucide-react';
+import { X, Check, Loader2, Search, Info } from 'lucide-react';
 import api from '../../utils/api';
 import type { Product } from '../../types';
+
+/* ─── Card flip: "See details" → back face with specs/features ─── */
+const PartCard: React.FC<{
+  product: Product;
+  selected: boolean;
+  onSelect: () => void;
+  fmt: (n: number) => string;
+}> = ({ product, selected, onSelect, fmt }) => {
+  const [flipped, setFlipped] = useState(false);
+
+  // Parse specs / features (stored as JSON strings on Product).
+  const specs: Record<string, string> = (() => {
+    const raw = (product as any).specs;
+    if (!raw) return {};
+    try { return typeof raw === 'string' ? JSON.parse(raw) : raw; } catch { return {}; }
+  })();
+  const features: string[] = (() => {
+    const raw = (product as any).features;
+    if (!raw) return [];
+    try {
+      const v = typeof raw === 'string' ? JSON.parse(raw) : raw;
+      return Array.isArray(v) ? v : [];
+    } catch { return []; }
+  })();
+  const hasDetails =
+    !!product.description || features.length > 0 || Object.keys(specs).length > 0;
+
+  return (
+    <div className="relative aspect-[3/4]" style={{ perspective: 1000 }}>
+      <motion.div
+        className="relative w-full h-full"
+        style={{ transformStyle: 'preserve-3d' }}
+        animate={{ rotateY: flipped ? 180 : 0 }}
+        transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+      >
+        {/* ── Front ── */}
+        <div
+          className="absolute inset-0 flex flex-col text-left border transition-colors cursor-pointer"
+          style={{ backfaceVisibility: 'hidden' }}
+          onClick={onSelect}
+        >
+          <div className={`flex-1 flex flex-col border ${selected ? 'border-white bg-white/5' : 'border-white/10 hover:border-white/30'}`}>
+            <div className="aspect-[4/3] bg-white/5 overflow-hidden">
+              {product.image && <img src={product.image} alt={product.name} className="w-full h-full object-cover" />}
+            </div>
+            <div className="p-3 flex-1 flex flex-col">
+              <p className="text-[10px] uppercase tracking-wider text-white/30">{product.brand || 'Part'}</p>
+              <p className="text-xs font-medium mt-1 line-clamp-2 flex-1">{product.name}</p>
+              <div className="flex items-center justify-between mt-2">
+                <p className="text-xs font-mono">{fmt(Number(product.price))}</p>
+                {selected && <Check className="w-4 h-4" />}
+              </div>
+              {hasDetails && (
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setFlipped(true); }}
+                  className="mt-2 inline-flex items-center gap-1 text-[10px] uppercase tracking-wider text-white/40 hover:text-white"
+                >
+                  <Info className="w-3 h-3" /> See details
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* ── Back ── */}
+        <div
+          className="absolute inset-0 flex flex-col border border-white/15 bg-black p-4 overflow-hidden"
+          style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
+        >
+          <div className="flex items-start justify-between gap-2 mb-2">
+            <div className="min-w-0">
+              <p className="text-[10px] uppercase tracking-wider text-white/30">{product.brand || ''}</p>
+              <p className="text-xs font-semibold line-clamp-2">{product.name}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setFlipped(false)}
+              className="w-6 h-6 flex items-center justify-center text-white/50 hover:text-white shrink-0"
+              aria-label="Back"
+            ><X className="w-3.5 h-3.5" /></button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto text-xs space-y-3 pr-1">
+            {product.description && (
+              <p className="text-white/60 leading-relaxed">{product.description}</p>
+            )}
+            {features.length > 0 && (
+              <ul className="space-y-1">
+                {features.slice(0, 6).map((f, i) => (
+                  <li key={i} className="flex gap-1.5 text-white/70">
+                    <span className="text-white/30">•</span>
+                    <span>{f}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {Object.keys(specs).length > 0 && (
+              <dl className="grid grid-cols-2 gap-x-2 gap-y-1">
+                {Object.entries(specs).slice(0, 8).map(([k, v]) => (
+                  <React.Fragment key={k}>
+                    <dt className="text-white/40 truncate">{k}</dt>
+                    <dd className="text-white/80 font-mono text-[11px] truncate">{String(v)}</dd>
+                  </React.Fragment>
+                ))}
+              </dl>
+            )}
+          </div>
+
+          <div className="flex items-center justify-between gap-2 mt-3 pt-3 border-t border-white/10">
+            <span className="text-xs font-mono">{fmt(Number(product.price))}</span>
+            <button
+              type="button"
+              onClick={() => { onSelect(); setFlipped(false); }}
+              className={`px-3 py-1.5 text-[10px] uppercase tracking-wider ${
+                selected ? 'border border-white text-white' : 'bg-white text-black'
+              }`}
+            >
+              {selected ? 'Selected' : 'Select'}
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    </div>
+  );
+};
 
 export type PartKind = 'battery' | 'ssd' | 'ram' | 'screen' | 'gpu' | 'keyboard' | 'cooler' | 'generic';
 
@@ -286,31 +412,22 @@ const RepairPartPicker: React.FC<Props> = ({ open, onClose, config, initial, onC
                             : 'No matching parts found in our shop catalog right now.'}
                         </p>
                         {config.kind === 'battery' && (
-                          <p className="text-white/30 text-xs">We can source one — contact us to confirm availability.</p>
+                          <p className="text-white/30 text-xs">We can source one. Contact us to confirm availability.</p>
                         )}
                       </div>
                     );
                   }
                   return (
                     <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                      {list.map(p => {
-                        const sel = selectedPart?.id === p.id;
-                        return (
-                          <button key={p.id} onClick={() => setSelectedPart(p)}
-                            className={`group text-left border transition-colors ${sel ? 'border-white bg-white/5' : 'border-white/10 hover:border-white/30'}`}
-                          >
-                            <div className="aspect-[4/3] bg-white/5 overflow-hidden">
-                              {p.image && <img src={p.image} alt={p.name} className="w-full h-full object-cover" />}
-                            </div>
-                            <div className="p-3">
-                              <p className="text-[10px] uppercase tracking-wider text-white/30">{p.brand || 'Part'}</p>
-                              <p className="text-xs font-medium mt-1 line-clamp-2">{p.name}</p>
-                              <p className="text-xs font-mono mt-2">{fmt(Number(p.price))}</p>
-                            </div>
-                            {sel && <div className="px-3 pb-3 -mt-1"><Check className="w-4 h-4" /></div>}
-                          </button>
-                        );
-                      })}
+                      {list.map(p => (
+                        <PartCard
+                          key={p.id}
+                          product={p}
+                          selected={selectedPart?.id === p.id}
+                          onSelect={() => setSelectedPart(p)}
+                          fmt={fmt}
+                        />
+                      ))}
                     </div>
                   );
                 })()

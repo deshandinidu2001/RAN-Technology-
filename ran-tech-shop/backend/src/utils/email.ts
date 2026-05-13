@@ -59,11 +59,20 @@ const renderHtml = (q: QuotePayload): string => {
       <td style="padding:10px 12px;border-bottom:1px solid #eee;text-align:right;color:#222;font-family:monospace;">${fmtRs(i.price * (i.quantity ?? 1))}</td>
     </tr>`).join('');
 
+  const isUrl = (s: string) => /^https?:\/\//i.test(s);
+  const ctaEntries = q.meta
+    ? Object.entries(q.meta).filter(([, v]) => typeof v === 'string' && isUrl(v as string))
+    : [];
   const metaRows = q.meta
-    ? Object.entries(q.meta).filter(([, v]) => !!v).map(([k, v]) =>
-        `<tr><td style="padding:4px 0;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">${k}</td><td style="padding:4px 0;color:#222;font-size:13px;text-align:right;">${v}</td></tr>`
-      ).join('')
+    ? Object.entries(q.meta)
+        .filter(([, v]) => !!v && !(typeof v === 'string' && isUrl(v as string)))
+        .map(([k, v]) =>
+          `<tr><td style="padding:4px 0;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">${k}</td><td style="padding:4px 0;color:#222;font-size:13px;text-align:right;">${v}</td></tr>`
+        ).join('')
     : '';
+  const ctaButtons = ctaEntries.map(([k, v]) =>
+    `<a href="${v}" style="display:inline-block;background:#000;color:#fff;text-decoration:none;padding:12px 22px;font-size:13px;letter-spacing:0.08em;text-transform:uppercase;margin-top:18px;margin-right:8px;">${k}</a>`
+  ).join('');
 
   return `<!doctype html><html><body style="margin:0;background:#f5f5f5;font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;">
     <div style="max-width:640px;margin:24px auto;background:#fff;border:1px solid #e5e5e5;">
@@ -95,6 +104,8 @@ const renderHtml = (q: QuotePayload): string => {
         </table>
 
         ${q.notes ? `<div style="margin-top:24px;padding:14px;background:#fafafa;border-left:3px solid #000;color:#444;font-size:13px;"><strong style="display:block;margin-bottom:4px;">Notes</strong>${q.notes}</div>` : ''}
+
+        ${ctaButtons ? `<div style="margin-top:8px;">${ctaButtons}</div>` : ''}
 
         <p style="margin-top:28px;color:#888;font-size:12px;line-height:1.6;">
           This quotation is valid for 14 days. Prices are indicative and subject to part availability.<br/>

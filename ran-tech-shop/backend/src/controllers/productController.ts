@@ -329,7 +329,7 @@ export const createProduct = async (req: Request, res: Response): Promise<void> 
       subcategory, brand, sku, specs, features, images,
       ramType, ramSpeed, ramCapacity, ssdType, ssdCapacity, ssdSpeed,
       gpuMemory, gpuChipset, displaySize, displayRes, displayType, compatibility,
-      isService, serviceType, condition,
+      isService, serviceType, condition, priceMax, deviceType, priceMode,
     } = req.body;
 
     if (!name || !description || !price || !category || !image) {
@@ -368,6 +368,10 @@ export const createProduct = async (req: Request, res: Response): Promise<void> 
         isService: !!isService,
         serviceType: serviceType || null,
         condition: condition || null,
+        priceMax: priceMax !== undefined && priceMax !== null && priceMax !== ''
+          ? parseFloat(priceMax) : null,
+        deviceType: deviceType || null,
+        priceMode: ['fixed', 'range', 'quote'].includes(priceMode) ? priceMode : 'fixed',
       })
       .select('*')
       .single();
@@ -393,7 +397,7 @@ export const updateProduct = async (req: Request, res: Response): Promise<void> 
       subcategory, brand, sku, specs, features, images,
       ramType, ramSpeed, ramCapacity, ssdType, ssdCapacity, ssdSpeed,
       gpuMemory, gpuChipset, displaySize, displayRes, displayType, compatibility,
-      isService, serviceType, condition,
+      isService, serviceType, condition, priceMax, deviceType, priceMode,
     } = req.body;
 
     const { data: existing } = await supabase
@@ -436,6 +440,13 @@ export const updateProduct = async (req: Request, res: Response): Promise<void> 
     if (isService !== undefined) updates.isService = !!isService;
     if (serviceType !== undefined) updates.serviceType = serviceType || null;
     if (condition !== undefined) updates.condition = condition || null;
+    if (priceMax !== undefined) {
+      updates.priceMax = priceMax === null || priceMax === '' ? null : parseFloat(priceMax);
+    }
+    if (deviceType !== undefined) updates.deviceType = deviceType || null;
+    if (priceMode !== undefined) {
+      updates.priceMode = ['fixed', 'range', 'quote'].includes(priceMode) ? priceMode : 'fixed';
+    }
 
     const { data: product, error } = await supabase
       .from('Product')

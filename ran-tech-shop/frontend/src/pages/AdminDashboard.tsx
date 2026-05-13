@@ -5,8 +5,10 @@ import { useAdminStore } from '../store/adminStore';
 import { useOrdersStore, RepairBooking, Order } from '../store/ordersStore';
 import { Product } from '../types';
 import api from '../utils/api';
+import RepairCategoryManager from '../components/admin/RepairCategoryManager';
+import QuoteRequestsPanel from '../components/admin/QuoteRequestsPanel';
 
-type TabType = 'repairs' | 'history' | 'orders' | 'products' | 'services' | 'categories' | 'users' | 'timeslots' | 'settings';
+type TabType = 'repairs' | 'quote-requests' | 'history' | 'orders' | 'products' | 'services' | 'repair-categories' | 'categories' | 'users' | 'timeslots' | 'settings';
 
 const repairStages = ['Received', 'Diagnosing', 'Waiting for Parts', 'Repairing', 'Ready for Pickup', 'Collected'];
 const technicians = ['Kasun Silva', 'Nimesh Jayawardena', 'Pradeep Fernando', 'Ruwan Perera'];
@@ -183,20 +185,37 @@ const stageToBookingStatus = (stage: number) => {
 
 const mapBackendBooking = (booking: BackendBooking): RepairBooking => ({
   ticketId: booking.id,
+  serialNo: (booking as any).serialNo ?? null,
   deviceType: booking.deviceType || 'Device',
-  deviceModel: booking.deviceType || 'General Repair',
+  deviceModel: (booking as any).deviceModel || booking.deviceType || 'General Repair',
   issueDescription: booking.issueDescription || '',
   currentStage: bookingStatusToStage(booking.status),
   bookedDate: booking.date || booking.createdAt?.split('T')[0] || '',
   estimatedCompletion: booking.completedAt?.split('T')[0] || booking.date || booking.createdAt?.split('T')[0] || '',
   technicianName: 'RAN Service Team',
   totalCost: Number(booking.actualCost ?? booking.estimatedCost ?? 0),
-  services: [],
+  services: (() => {
+    const raw = (booking as any).services;
+    if (!raw) return [] as string[];
+    try { const v = typeof raw === 'string' ? JSON.parse(raw) : raw; return Array.isArray(v) ? v.map(String) : []; }
+    catch { return [] as string[]; }
+  })(),
   timeSlot: booking.timeSlot || '',
   customerName: booking.customerName || 'Customer',
   customerEmail: booking.customerEmail || '',
   customerPhone: booking.customerPhone || '',
   createdAt: booking.createdAt || new Date().toISOString(),
+  requestType: ((booking as any).requestType as 'quote' | 'booking') || 'booking',
+  status: booking.status,
+  quotedPrice: (booking as any).quotedPrice ?? null,
+  quotedPriceMax: (booking as any).quotedPriceMax ?? null,
+  quoteMessage: (booking as any).quoteMessage ?? null,
+  issueImages: (() => {
+    const raw = (booking as any).images;
+    if (!raw) return [] as string[];
+    try { const v = typeof raw === 'string' ? JSON.parse(raw) : raw; return Array.isArray(v) ? v : []; }
+    catch { return [] as string[]; }
+  })(),
 });
 
 const mapBackendOrder = (order: BackendOrder): Order => ({
@@ -373,6 +392,18 @@ const AdminDashboard: React.FC = () => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [showProductForm, setShowProductForm] = useState(false);
   const [serviceFormMode, setServiceFormMode] = useState(false);
+  const [servicesDeviceFilter, setServicesDeviceFilter] = useState<'all' | 'desktop' | 'laptop' | 'mobile' | 'unassigned'>('all');
+  // Service-form local state for the multi-step "Add Service" UI.
+  const [svcFormDevice, setSvcFormDevice] = useState<'' | 'desktop' | 'laptop' | 'mobile'>('');
+  const [svcFormCategories, setSvcFormCategories] = useState<Array<{ id: string; name: string; slug: string }>>([]);
+  const [svcFormPriceMode, setSvcFormPriceMode] = useState<'fixed' | 'range' | 'quote'>('fixed');
+
+  useEffect(() => {
+    if (!svcFormDevice) { setSvcFormCategories([]); return; }
+    api.get(`/repair-categories?deviceType=${svcFormDevice}`)
+      .then(res => setSvcFormCategories(res.data?.categories ?? []))
+      .catch(() => setSvcFormCategories([]));
+  }, [svcFormDevice]);
   const [productFormCategory, setProductFormCategory] = useState('');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -524,13 +555,18 @@ const AdminDashboard: React.FC = () => {
     )
   );
 
-  // Filter services (isService=true)
-  const filteredServices = dbProducts.filter(p =>
-    (p as any).isService && (
+  // Filter services (isService=true), optionally restricted to a device type.
+  const filteredServices = dbProducts.filter(p => {
+    if (!(p as any).isService) return false;
+    const matchesText =
       p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      ((p as any).serviceType || '').toLowerCase().includes(searchTerm.toLowerCase())
-    )
-  );
+      ((p as any).serviceType || '').toLowerCase().includes(searchTerm.toLowerCase());
+    if (!matchesText) return false;
+    if (servicesDeviceFilter === 'all') return true;
+    const dt = ((p as any).deviceType || '').toLowerCase();
+    if (servicesDeviceFilter === 'unassigned') return !dt;
+    return dt === servicesDeviceFilter;
+  });
 
   // Stats
   const stats = {
@@ -600,10 +636,12 @@ const AdminDashboard: React.FC = () => {
         <nav className="flex-1 overflow-y-auto py-3">
           {[
             { id: 'repairs', label: 'Repairs', icon: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> },
+            { id: 'quote-requests', label: 'Quote Requests', icon: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg> },
             { id: 'history', label: 'Repair History', icon: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg> },
             { id: 'orders', label: 'Orders', icon: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg> },
             { id: 'products', label: 'Products', icon: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg> },
             { id: 'services', label: 'Services', icon: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg> },
+            { id: 'repair-categories', label: 'Repair Categories', icon: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7h18M3 12h18M3 17h12" /></svg> },
             { id: 'categories', label: 'Filter Categories', icon: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" /></svg> },
             { id: 'users', label: 'Users', icon: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg> },
             { id: 'timeslots', label: 'Time Slots', icon: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> },
@@ -649,6 +687,8 @@ const AdminDashboard: React.FC = () => {
               {activeTab === 'orders' && 'Orders'}
               {activeTab === 'products' && 'Products'}
               {activeTab === 'services' && 'Services'}
+              {activeTab === 'quote-requests' && 'Quote Requests'}
+              {activeTab === 'repair-categories' && 'Repair Categories'}
               {activeTab === 'categories' && 'Filter Categories'}
               {activeTab === 'users' && 'Users'}
               {activeTab === 'timeslots' && 'Time Slots'}
@@ -702,10 +742,12 @@ const AdminDashboard: React.FC = () => {
         <div className="hidden">
           {[
             { id: 'repairs', label: 'Repairs', icon: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> },
+            { id: 'quote-requests', label: 'Quote Requests', icon: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg> },
             { id: 'history', label: 'Repair History', icon: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg> },
             { id: 'orders', label: 'Orders', icon: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg> },
             { id: 'products', label: 'Products', icon: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg> },
             { id: 'services', label: 'Services', icon: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg> },
+            { id: 'repair-categories', label: 'Repair Categories', icon: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7h18M3 12h18M3 17h12" /></svg> },
             { id: 'categories', label: 'Filter Categories', icon: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" /></svg> },
             { id: 'users', label: 'Users', icon: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg> },
             { id: 'timeslots', label: 'Time Slots', icon: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> },
@@ -761,7 +803,7 @@ const AdminDashboard: React.FC = () => {
                   <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
-                        <span className="text-primary font-bold">#{repair.ticketId}</span>
+                        <span className="text-primary font-bold">{repair.serialNo != null ? `REP#${repair.serialNo}` : `#${repair.ticketId.slice(0, 8)}`}</span>
                         <span className={`text-xs px-2 py-1 rounded-full ${
                           repair.currentStage === 5 ? 'bg-blue-500/20 text-blue-400' :
                           repair.currentStage === 4 ? 'bg-green-500/20 text-green-400' :
@@ -854,7 +896,7 @@ const AdminDashboard: React.FC = () => {
                   <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
-                        <span className="text-primary font-bold">#{repair.ticketId}</span>
+                        <span className="text-primary font-bold">{repair.serialNo != null ? `REP#${repair.serialNo}` : `#${repair.ticketId.slice(0, 8)}`}</span>
                         <span className="text-xs px-2 py-1 rounded-full bg-blue-500/20 text-blue-400">
                           Collected
                         </span>
@@ -1125,6 +1167,8 @@ const AdminDashboard: React.FC = () => {
                   setSelectedProduct(null);
                   setServiceFormMode(true);
                   setProductFormCategory('services');
+                  setSvcFormDevice('');
+                  setSvcFormPriceMode('fixed');
                   setShowProductForm(true);
                 }}
                 className="px-6 py-3 bg-primary text-dark  font-semibold hover:bg-primary/90 transition-colors flex items-center gap-2"
@@ -1134,6 +1178,39 @@ const AdminDashboard: React.FC = () => {
                 </svg>
                 Add Service
               </button>
+            </div>
+
+            {/* Device-type tabs — let admin manage services per device. */}
+            <div className="flex flex-wrap gap-2 mb-6 border-b border-white/10 pb-3">
+              {([
+                { id: 'all',         label: 'All' },
+                { id: 'desktop',     label: 'Desktop Repair' },
+                { id: 'laptop',      label: 'Laptop Repair' },
+                { id: 'mobile',      label: 'Mobile Repair' },
+                { id: 'unassigned',  label: 'Unassigned' },
+              ] as const).map(tab => {
+                const count = dbProducts.filter(p => {
+                  if (!(p as any).isService) return false;
+                  const dt = ((p as any).deviceType || '').toLowerCase();
+                  if (tab.id === 'all') return true;
+                  if (tab.id === 'unassigned') return !dt;
+                  return dt === tab.id;
+                }).length;
+                const active = servicesDeviceFilter === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setServicesDeviceFilter(tab.id)}
+                    className={`px-4 py-2 text-xs font-semibold uppercase tracking-wider transition-colors ${
+                      active
+                        ? 'bg-primary text-dark'
+                        : 'border border-white/10 text-white/60 hover:text-white hover:border-white/30'
+                    }`}
+                  >
+                    {tab.label} <span className="ml-1 opacity-60">({count})</span>
+                  </button>
+                );
+              })}
             </div>
 
             {filteredServices.length === 0 ? (
@@ -1176,8 +1253,17 @@ const AdminDashboard: React.FC = () => {
                           )}
                         </div>
                         <p className="text-white/50 text-sm line-clamp-2">{service.description}</p>
+                        {((service as any).deviceType) && (
+                          <span className="inline-block text-[10px] px-2 py-0.5 bg-white/5 text-white/60 uppercase tracking-wider capitalize">
+                            {(service as any).deviceType}
+                          </span>
+                        )}
                         <div className="flex items-center justify-between pt-2">
-                          <p className="text-primary text-xl font-bold">Rs. {service.price.toLocaleString()}</p>
+                          <p className="text-primary text-xl font-bold">
+                            {(service as any).priceMax != null && (service as any).priceMax > service.price
+                              ? `Rs. ${service.price.toLocaleString()} – ${(service as any).priceMax.toLocaleString()}`
+                              : `Rs. ${service.price.toLocaleString()}`}
+                          </p>
                           <div className="flex gap-2">
                             <button
                               onClick={() => handleToggleFeatured(service)}
@@ -1199,6 +1285,13 @@ const AdminDashboard: React.FC = () => {
                                 setSelectedProduct(service);
                                 setServiceFormMode(true);
                                 setProductFormCategory('services');
+                                const dt = ((service as any).deviceType || '') as '' | 'desktop' | 'laptop' | 'mobile';
+                                setSvcFormDevice(dt);
+                                const pmRaw = (service as any).priceMode as string | undefined;
+                                const pm: 'fixed' | 'range' | 'quote' =
+                                  pmRaw === 'range' || pmRaw === 'quote' ? pmRaw
+                                  : ((service as any).priceMax != null && (service as any).priceMax > service.price ? 'range' : 'fixed');
+                                setSvcFormPriceMode(pm);
                                 setShowProductForm(true);
                               }}
                               title="Edit service"
@@ -1226,6 +1319,23 @@ const AdminDashboard: React.FC = () => {
               </div>
             )}
           </div>
+        )}
+
+        {/* Quote Requests Tab */}
+        {activeTab === 'quote-requests' && (
+          <QuoteRequestsPanel
+            bookings={liveBookings}
+            onUpdated={(u) =>
+              setLiveBookings(prev =>
+                prev.map(b => b.ticketId === u.ticketId ? { ...b, ...u } : b)
+              )
+            }
+          />
+        )}
+
+        {/* Repair Categories Tab */}
+        {activeTab === 'repair-categories' && (
+          <RepairCategoryManager />
         )}
 
         {/* Filter Categories Tab */}
@@ -1384,7 +1494,7 @@ const AdminDashboard: React.FC = () => {
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-white">Edit Repair #{selectedRepair.ticketId}</h2>
+                <h2 className="text-xl font-bold text-white">Edit Repair {selectedRepair.serialNo != null ? `REP#${selectedRepair.serialNo}` : `#${selectedRepair.ticketId.slice(0, 8)}`}</h2>
                 <button
                   onClick={() => setSelectedRepair(null)}
                   className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white/70 hover:text-white"
@@ -1452,6 +1562,56 @@ const AdminDashboard: React.FC = () => {
                     }}
                     className="w-full px-4 py-3 bg-dark-200/50 border border-white/10  text-white focus:outline-none focus:border-primary/50"
                   />
+                </div>
+
+                <div className="pt-4 border-t border-white/10">
+                  <h4 className="text-white/70 text-sm mb-2">Send Quote to Customer</h4>
+                  <p className="text-white/40 text-xs mb-3">
+                    Sends the customer a web notification + email with this final repair price.
+                  </p>
+                  <div className="flex flex-col gap-2">
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="Final price (Rs.)"
+                      value={(selectedRepair as any)._quoteDraft ?? selectedRepair.totalCost ?? ''}
+                      onChange={(e) => setSelectedRepair({ ...selectedRepair, _quoteDraft: e.target.value } as any)}
+                      className="w-full px-4 py-3 bg-dark-200/50 border border-white/10 text-white placeholder:text-white/40 focus:outline-none focus:border-primary/50"
+                    />
+                    <textarea
+                      placeholder="Optional note for the customer (e.g. parts ordered, ETA)..."
+                      value={(selectedRepair as any)._quoteMsg ?? ''}
+                      onChange={(e) => setSelectedRepair({ ...selectedRepair, _quoteMsg: e.target.value } as any)}
+                      rows={2}
+                      className="w-full px-4 py-3 bg-dark-200/50 border border-white/10 text-white placeholder:text-white/40 focus:outline-none focus:border-primary/50 resize-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const raw = (selectedRepair as any)._quoteDraft ?? selectedRepair.totalCost;
+                        const price = Number(raw);
+                        if (!Number.isFinite(price) || price < 0) {
+                          alert('Enter a valid quote price.');
+                          return;
+                        }
+                        try {
+                          await api.post(`/repairs/admin/booking/${selectedRepair.ticketId}/quote`, {
+                            quotedPrice: price,
+                            quoteMessage: (selectedRepair as any)._quoteMsg || undefined,
+                          });
+                          handleRepairCostUpdate(selectedRepair.ticketId, price);
+                          setSelectedRepair({ ...selectedRepair, totalCost: price, _quoteSent: true } as any);
+                          alert('Quote sent to customer.');
+                        } catch (err: any) {
+                          alert(err?.response?.data?.error || 'Failed to send quote.');
+                        }
+                      }}
+                      className="px-4 py-3 bg-primary text-dark font-semibold hover:bg-primary/90 transition-colors"
+                    >
+                      Send Quote
+                    </button>
+                  </div>
                 </div>
 
                 <div className="pt-4 border-t border-white/10">
@@ -1673,6 +1833,17 @@ const AdminDashboard: React.FC = () => {
                     productData.subcategory = serviceType;
                     // Stock kept as a sane default for services so booking flows work.
                     productData.stock = 999;
+                    productData.deviceType = (formData.get('deviceType') as string) || null;
+                    const priceMode = (formData.get('priceMode') as string) || 'fixed';
+                    productData.priceMode = ['fixed', 'range', 'quote'].includes(priceMode) ? priceMode : 'fixed';
+                    if (priceMode === 'range') {
+                      const priceMaxRaw = formData.get('priceMax') as string;
+                      productData.priceMax = priceMaxRaw && priceMaxRaw.trim() !== ''
+                        ? Number(priceMaxRaw) : null;
+                    } else {
+                      productData.priceMax = null;
+                    }
+                    if (priceMode === 'quote') productData.price = 0;
                     // For services we use the `compatibility` field to store JSON of compatible product IDs
                     // shown in the part picker on the repair page.
                     productData.compatibility = JSON.stringify(compatibleIds);
@@ -1728,14 +1899,14 @@ const AdminDashboard: React.FC = () => {
                 {(productFormCategory || serviceFormMode || selectedProduct) && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="md:col-span-2">
-                    <label className="block text-white/70 text-sm mb-2">Product Name *</label>
+                    <label className="block text-white/70 text-sm mb-2">{(serviceFormMode || (selectedProduct as any)?.isService) ? 'Service Name *' : 'Product Name *'}</label>
                     <input
                       type="text"
                       name="name"
                       defaultValue={selectedProduct?.name}
                       required
                       className="w-full px-4 py-3 bg-dark-200/50 border border-white/10  text-white placeholder:text-white/40 focus:outline-none focus:border-primary/50"
-                      placeholder="e.g., iPhone 15 Pro Max"
+                      placeholder={(serviceFormMode || (selectedProduct as any)?.isService) ? 'e.g., Battery Replacement' : 'e.g., iPhone 15 Pro Max'}
                     />
                   </div>
 
@@ -1747,23 +1918,145 @@ const AdminDashboard: React.FC = () => {
                       required
                       rows={3}
                       className="w-full px-4 py-3 bg-dark-200/50 border border-white/10  text-white placeholder:text-white/40 focus:outline-none focus:border-primary/50 resize-none"
-                      placeholder="Product description..."
+                      placeholder={(serviceFormMode || (selectedProduct as any)?.isService) ? 'Service description...' : 'Product description...'}
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-white/70 text-sm mb-2">Price (Rs.) *</label>
-                    <input
-                      type="number"
-                      name="price"
-                      defaultValue={selectedProduct?.price}
-                      required
-                      min="0"
-                      step="0.01"
-                      className="w-full px-4 py-3 bg-dark-200/50 border border-white/10  text-white placeholder:text-white/40 focus:outline-none focus:border-primary/50"
-                      placeholder="0.00"
-                    />
-                  </div>
+                  {/* Services use a redesigned multi-step block below; products keep the
+                      original single Price field here. */}
+                  {!(serviceFormMode || (selectedProduct as any)?.isService) && (
+                    <div>
+                      <label className="block text-white/70 text-sm mb-2">Price (Rs.) *</label>
+                      <input
+                        type="number"
+                        name="price"
+                        defaultValue={selectedProduct?.price}
+                        required
+                        min="0"
+                        step="0.01"
+                        className="w-full px-4 py-3 bg-dark-200/50 border border-white/10  text-white placeholder:text-white/40 focus:outline-none focus:border-primary/50"
+                        placeholder="0.00"
+                      />
+                    </div>
+                  )}
+
+                  {(serviceFormMode || (selectedProduct as any)?.isService) && (
+                    <div className="md:col-span-2 space-y-5 border border-white/10 p-5 bg-white/[0.02]">
+                      {/* Step A: Device */}
+                      <div>
+                        <label className="block text-white/50 text-[10px] tracking-[0.3em] uppercase font-medium mb-2">Step 1 · Device</label>
+                        <select
+                          name="deviceType"
+                          value={svcFormDevice}
+                          onChange={(e) => setSvcFormDevice(e.target.value as any)}
+                          required
+                          className="w-full px-4 py-3 bg-black border border-white/15 text-white focus:outline-none focus:border-white/60"
+                        >
+                          <option value="">Which device is this for?</option>
+                          <option value="desktop">Desktop</option>
+                          <option value="laptop">Laptop</option>
+                          <option value="mobile">Mobile</option>
+                        </select>
+                      </div>
+
+                      {/* Step B: Category (from RepairCategory) */}
+                      {svcFormDevice && (
+                        <div>
+                          <label className="block text-white/50 text-[10px] tracking-[0.3em] uppercase font-medium mb-2">Step 2 · Category</label>
+                          {svcFormCategories.length === 0 ? (
+                            <div className="text-white/50 text-xs border border-white/10 p-3">
+                              No categories yet for <span className="capitalize">{svcFormDevice}</span>. Add some under the
+                              "Repair Categories" tab — then come back here.
+                            </div>
+                          ) : (
+                            <select
+                              name="serviceType"
+                              defaultValue={(selectedProduct as any)?.serviceType || ''}
+                              required
+                              className="w-full px-4 py-3 bg-black border border-white/15 text-white focus:outline-none focus:border-white/60"
+                            >
+                              <option value="">Select a category</option>
+                              {svcFormCategories.map(c => (
+                                <option key={c.id} value={c.slug}>{c.name}</option>
+                              ))}
+                            </select>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Step C: Price mode */}
+                      <div>
+                        <label className="block text-white/50 text-[10px] tracking-[0.3em] uppercase font-medium mb-2">Step 3 · Pricing</label>
+                        <div className="grid sm:grid-cols-3 gap-2">
+                          {([
+                            { id: 'fixed', label: 'Fixed price',   blurb: 'Show one final price (e.g. Windows 11 upgrade Rs. 4500).' },
+                            { id: 'range', label: 'Min / Max',     blurb: 'Show a range (e.g. Battery Rs. 10k–30k). You confirm the final price after inspection.' },
+                            { id: 'quote', label: 'Show cost only', blurb: 'Hide price until after inspection. The customer can\'t book until you reply with a price.' },
+                          ] as const).map(opt => (
+                            <button
+                              type="button"
+                              key={opt.id}
+                              onClick={() => setSvcFormPriceMode(opt.id)}
+                              className={`text-left p-3 border transition-colors ${
+                                svcFormPriceMode === opt.id
+                                  ? 'border-primary bg-primary/10'
+                                  : 'border-white/10 hover:border-white/30'
+                              }`}
+                            >
+                              <div className="text-white text-sm font-semibold">{opt.label}</div>
+                              <div className="text-white/40 text-[11px] leading-snug mt-1">{opt.blurb}</div>
+                            </button>
+                          ))}
+                        </div>
+                        <input type="hidden" name="priceMode" value={svcFormPriceMode} />
+                      </div>
+
+                      {/* Step D: Price inputs */}
+                      <div>
+                        <label className="block text-white/50 text-[10px] tracking-[0.3em] uppercase font-medium mb-2">
+                          Step 4 · Price{svcFormPriceMode === 'quote' ? ' (hidden until quoted)' : ''}
+                        </label>
+                        <div className="grid sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-white/60 text-xs mb-1">
+                              {svcFormPriceMode === 'range' ? 'Min price (Rs.)' : 'Price (Rs.)'}
+                              {svcFormPriceMode !== 'quote' && ' *'}
+                            </label>
+                            <input
+                              type="number"
+                              name="price"
+                              defaultValue={selectedProduct?.price ?? (svcFormPriceMode === 'quote' ? 0 : '')}
+                              required={svcFormPriceMode !== 'quote'}
+                              min="0"
+                              step="0.01"
+                              className="w-full px-4 py-2.5 bg-black border border-white/15 text-white focus:outline-none focus:border-white/60"
+                              placeholder="0.00"
+                            />
+                          </div>
+                          {svcFormPriceMode === 'range' && (
+                            <div>
+                              <label className="block text-white/60 text-xs mb-1">Max price (Rs.) *</label>
+                              <input
+                                type="number"
+                                name="priceMax"
+                                defaultValue={(selectedProduct as any)?.priceMax ?? ''}
+                                required
+                                min="0"
+                                step="0.01"
+                                className="w-full px-4 py-2.5 bg-black border border-white/15 text-white focus:outline-none focus:border-white/60"
+                                placeholder="0.00"
+                              />
+                            </div>
+                          )}
+                        </div>
+                        {svcFormPriceMode === 'quote' && (
+                          <p className="text-white/40 text-[11px] mt-2">
+                            Customer sees "Quote on inspection" — they submit a request, you reply with the price, then they confirm the booking.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
                   {!(serviceFormMode || (selectedProduct as any)?.isService) && (
                     <div>
@@ -1783,28 +2076,10 @@ const AdminDashboard: React.FC = () => {
                   {(serviceFormMode || (selectedProduct as any)?.isService) ? (
                     <>
                       <div className="md:col-span-2">
-                        <label className="block text-white/70 text-sm mb-2">Service Type *</label>
-                        <select
-                          name="serviceType"
-                          defaultValue={(selectedProduct as any)?.serviceType || ''}
-                          required
-                          className="w-full px-4 py-3 bg-dark-200/50 border border-white/10  text-white focus:outline-none focus:border-primary/50"
-                        >
-                          <option value="">Select Service Type</option>
-                          <option value="repair">Hardware / Repair</option>
-                          <option value="software">Software</option>
-                          <option value="data">Data Recovery</option>
-                          <option value="upgrade">Upgrade</option>
-                          <option value="maintenance">Maintenance</option>
-                          <option value="cleaning">Cleaning</option>
-                        </select>
-                        <p className="text-xs text-white/40 mt-1">Used by the booking page to group services.</p>
-                      </div>
-
-                      <div className="md:col-span-2">
-                        <label className="block text-white/70 text-sm mb-2">Compatible Products</label>
+                        <label className="block text-white/70 text-sm mb-2">Compatible Products (optional)</label>
                         <p className="text-xs text-white/40 mb-2">
-                          Customers see these products in the part picker for this service. Leave empty to auto-detect by service name.
+                          For upgrade-type services (RAM, SSD, GPU…), pick which products from your shop the customer
+                          can choose from when they select this service. Leave empty for repairs that don't need a part picker.
                         </p>
                         <CompatibleProductsPicker
                           allProducts={dbProducts.filter(p => !(p as any).isService)}
