@@ -222,7 +222,11 @@ const RepairPartPicker: React.FC<Props> = ({ open, onClose, config, initial, onC
       Promise.all(config.compatibleProductIds.map(id =>
         api.get(`/products/${id}`).then(r => r.data?.product || r.data).catch(() => null)
       ))
-        .then(arr => setParts(arr.filter(Boolean) as Product[]))
+        .then(arr => setParts(
+          (arr.filter(Boolean) as Product[])
+            // Exclude service entries — only real products can be picked as parts.
+            .filter(p => !(p as any).isService)
+        ))
         .catch(() => setError('Could not load compatible parts.'))
         .finally(() => setLoading(false));
       return;

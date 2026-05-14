@@ -116,9 +116,17 @@ const QuoteRequestsPanel: React.FC<Props> = ({ bookings, onUpdated }) => {
                         {b.serialNo != null ? `REP#${b.serialNo}` : `#${b.ticketId.slice(0, 8)}`}
                       </span>
                       <span className={`px-2 py-0.5 text-[10px] uppercase tracking-wider ${
-                        isWaitingOnAdmin ? 'bg-amber-500/20 text-amber-300' : 'bg-blue-500/20 text-blue-300'
+                        isWaitingOnAdmin
+                          ? 'bg-amber-500/20 text-amber-300'
+                          : b.status === 'quote-sent'
+                            ? 'bg-blue-500/20 text-blue-300'
+                            : 'bg-emerald-500/20 text-emerald-300'
                       }`}>
-                        {isWaitingOnAdmin ? 'Needs Quote' : 'Sent, awaiting customer'}
+                        {isWaitingOnAdmin
+                          ? 'Needs Quote'
+                          : b.status === 'quote-sent'
+                            ? 'Sent, awaiting customer'
+                            : `Accepted · ${b.status}`}
                       </span>
                       <span className="text-white/40 text-xs">{fmtWhen(b.createdAt)}</span>
                     </div>
@@ -129,6 +137,17 @@ const QuoteRequestsPanel: React.FC<Props> = ({ bookings, onUpdated }) => {
                     <p className="text-[10px] text-white/30 uppercase tracking-wider">Appointment</p>
                     <p className="text-white text-sm">{b.bookedDate}</p>
                     <p className="text-white/60 text-xs">{b.timeSlot}</p>
+                    {b.quotedPrice != null && (
+                      (b as any).quotedPriceMax != null && (b as any).quotedPriceMax > b.quotedPrice ? (
+                        <p className="mt-2 text-primary text-xs font-bold tracking-wider">
+                          QUOTED {fmtRs(b.quotedPrice)} – {fmtRs((b as any).quotedPriceMax)}
+                        </p>
+                      ) : (
+                        <p className="mt-2 text-primary text-xs font-bold tracking-wider">
+                          QUOTED {fmtRs(b.quotedPrice)}
+                        </p>
+                      )
+                    )}
                   </div>
                 </div>
 
@@ -168,60 +187,78 @@ const QuoteRequestsPanel: React.FC<Props> = ({ bookings, onUpdated }) => {
                   </div>
                 )}
 
-                {b.status === 'quote-sent' && b.quotedPrice != null && (
+                {b.quotedPrice != null && (
                   <div className="mb-4 border-l-2 border-blue-400/40 pl-3 text-sm">
-                    <p className="text-white/40 text-xs">Last quote sent</p>
-                    <p className="text-white font-semibold">
-                      {(b as any).quotedPriceMax != null && (b as any).quotedPriceMax > b.quotedPrice
-                        ? `${fmtRs(b.quotedPrice)} to ${fmtRs((b as any).quotedPriceMax)}`
-                        : fmtRs(b.quotedPrice)}
-                    </p>
-                    {b.quoteMessage && <p className="text-white/60 text-xs mt-1 whitespace-pre-line">{b.quoteMessage}</p>}
+                    <p className="text-white/40 text-xs uppercase tracking-wider">Last quote sent</p>
+                    {(b as any).quotedPriceMax != null && (b as any).quotedPriceMax > b.quotedPrice ? (
+                      <div className="flex flex-wrap gap-x-6 gap-y-1 mt-1">
+                        <div>
+                          <span className="text-white/40 text-[10px] uppercase tracking-wider">Min</span>
+                          <p className="text-white font-semibold">{fmtRs(b.quotedPrice)}</p>
+                        </div>
+                        <div>
+                          <span className="text-white/40 text-[10px] uppercase tracking-wider">Max</span>
+                          <p className="text-white font-semibold">{fmtRs((b as any).quotedPriceMax)}</p>
+                        </div>
+                        <div>
+                          <span className="text-white/40 text-[10px] uppercase tracking-wider">Range</span>
+                          <p className="text-primary font-semibold">{fmtRs(b.quotedPrice)} – {fmtRs((b as any).quotedPriceMax)}</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="mt-1">
+                        <span className="text-white/40 text-[10px] uppercase tracking-wider">Fixed price</span>
+                        <p className="text-primary font-semibold">{fmtRs(b.quotedPrice)}</p>
+                      </div>
+                    )}
+                    {b.quoteMessage && <p className="text-white/60 text-xs mt-2 whitespace-pre-line">{b.quoteMessage}</p>}
                   </div>
                 )}
 
-                <div className="pt-4 border-t border-white/10 space-y-2">
-                  <p className="text-[10px] uppercase tracking-wider text-white/40">
-                    Send a fixed price or a range. Customer is notified by SMS, email and web notification.
-                  </p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      placeholder="Price (Rs.) or min of range"
-                      value={d.price}
-                      onChange={(e) => setDraft(b.ticketId, { price: e.target.value })}
-                      className="px-3 py-2.5 bg-black border border-white/15 text-white placeholder:text-white/30 focus:outline-none focus:border-white/50"
-                    />
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      placeholder="Max (optional) for a range"
-                      value={d.priceMax}
-                      onChange={(e) => setDraft(b.ticketId, { priceMax: e.target.value })}
-                      className="px-3 py-2.5 bg-black border border-white/15 text-white placeholder:text-white/30 focus:outline-none focus:border-white/50"
-                    />
+                {isWaitingOnAdmin && (
+                  <div className="pt-4 border-t border-white/10 space-y-2">
+                    <p className="text-[10px] uppercase tracking-wider text-white/40">
+                      Send a fixed price or a range. Customer is notified by SMS, email and web notification.
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="Price (Rs.) or min of range"
+                        value={d.price}
+                        onChange={(e) => setDraft(b.ticketId, { price: e.target.value })}
+                        className="px-3 py-2.5 bg-black border border-white/15 text-white placeholder:text-white/30 focus:outline-none focus:border-white/50"
+                      />
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="Max (optional) for a range"
+                        value={d.priceMax}
+                        onChange={(e) => setDraft(b.ticketId, { priceMax: e.target.value })}
+                        className="px-3 py-2.5 bg-black border border-white/15 text-white placeholder:text-white/30 focus:outline-none focus:border-white/50"
+                      />
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <input
+                        type="text"
+                        placeholder="Optional note for the customer..."
+                        value={d.msg}
+                        onChange={(e) => setDraft(b.ticketId, { msg: e.target.value })}
+                        className="flex-1 px-3 py-2.5 bg-black border border-white/15 text-white placeholder:text-white/30 focus:outline-none focus:border-white/50"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => sendQuote(b)}
+                        disabled={d.sending}
+                        className="px-5 py-2.5 bg-primary text-dark font-semibold hover:bg-primary/90 disabled:opacity-50"
+                      >
+                        {d.sending ? 'Sending...' : 'Send quote'}
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <input
-                      type="text"
-                      placeholder="Optional note for the customer..."
-                      value={d.msg}
-                      onChange={(e) => setDraft(b.ticketId, { msg: e.target.value })}
-                      className="flex-1 px-3 py-2.5 bg-black border border-white/15 text-white placeholder:text-white/30 focus:outline-none focus:border-white/50"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => sendQuote(b)}
-                      disabled={d.sending}
-                      className="px-5 py-2.5 bg-primary text-dark font-semibold hover:bg-primary/90 disabled:opacity-50"
-                    >
-                      {d.sending ? 'Sending...' : b.status === 'quote-sent' ? 'Re-send quote' : 'Send quote'}
-                    </button>
-                  </div>
-                </div>
+                )}
               </div>
             );
           })}

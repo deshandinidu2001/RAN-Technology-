@@ -332,7 +332,11 @@ export const createProduct = async (req: Request, res: Response): Promise<void> 
       isService, serviceType, condition, priceMax, deviceType, priceMode,
     } = req.body;
 
-    if (!name || !description || !price || !category || !image) {
+    // Services in "quote on inspection" mode have no upfront price (saved as 0).
+    const priceMissing = isService && priceMode === 'quote'
+      ? (price === undefined || price === null)
+      : (price === undefined || price === null || price === '' || isNaN(parseFloat(price)));
+    if (!name || !description || priceMissing || !category || !image) {
       res.status(400).json({ error: 'Name, description, price, category, and image are required' });
       return;
     }
@@ -414,7 +418,7 @@ export const updateProduct = async (req: Request, res: Response): Promise<void> 
     const updates: Record<string, unknown> = {};
     if (name) updates.name = name;
     if (description) updates.description = description;
-    if (price) updates.price = parseFloat(price);
+    if (price !== undefined && price !== null && price !== '') updates.price = parseFloat(price);
     if (category) updates.category = category;
     if (image) updates.image = image;
     if (stock !== undefined) updates.stock = parseInt(stock, 10);

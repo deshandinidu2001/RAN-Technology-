@@ -515,20 +515,37 @@ export const sendBookingQuote = async (req: Request, res: Response): Promise<voi
       .maybeSingle();
     const isQuoteFlow = (existing as any)?.requestType === 'quote';
 
-    const { data: booking, error: updErr } = await supabase
-      .from('RepairBooking')
-      .update({
+    const buildUpdate = (includeMax: boolean) => {
+      const base: Record<string, any> = {
         quotedPrice: price,
-        quotedPriceMax: priceMax,
         quotedAt: new Date().toISOString(),
         quoteMessage: quoteMessage || null,
-        // Quote-flow stays pending customer acceptance; direct bookings jump to confirmed.
         status: isQuoteFlow ? 'quote-sent' : 'confirmed',
         estimatedCost: priceMax ?? price,
-      })
+      };
+      if (includeMax) base.quotedPriceMax = priceMax;
+      return base;
+    };
+
+    let { data: booking, error: updErr } = await supabase
+      .from('RepairBooking')
+      .update(buildUpdate(true))
       .eq('id', id)
       .select('*')
       .maybeSingle();
+
+    // Retry without quotedPriceMax if the column hasn't been migrated yet.
+    if (updErr && /quotedPriceMax/i.test(updErr.message || '')) {
+      console.warn('[repair] quotedPriceMax column missing — retrying without it. Apply migration 0006_serials_and_quote_range.sql.');
+      const retry = await supabase
+        .from('RepairBooking')
+        .update(buildUpdate(false))
+        .eq('id', id)
+        .select('*')
+        .maybeSingle();
+      booking = retry.data;
+      updErr = retry.error;
+    }
 
     if (updErr) throw updErr;
     if (!booking) {
@@ -560,17 +577,21 @@ export const sendBookingQuote = async (req: Request, res: Response): Promise<voi
     try {
       const frontendUrl = (process.env.FRONTEND_URL || process.env.PUBLIC_URL || '').replace(/\/$/, '');
       const acceptUrl = frontendUrl ? `${frontendUrl}/repair/quote/${b.id}` : `/repair/quote/${b.id}`;
+      const hasRange = priceMax != null && priceMax > price;
       await sendQuoteEmail({
         to: b.customerEmail,
         customerName: b.customerName || 'Customer',
         type: 'repair',
         items: [{
           name: `Repair: ${b.deviceType || 'Device'}${b.deviceModel ? ` (${b.deviceModel})` : ''}`,
-          description: priceMax != null && priceMax > price ? `Estimated ${priceLabel}` : (b.issueDescription || undefined),
+          description: b.issueDescription || undefined,
           price,
+          priceMax: hasRange ? priceMax : null,
         }],
-        subtotal: priceMax ?? price,
-        total: priceMax ?? price,
+        subtotal: price,
+        subtotalMax: hasRange ? priceMax : null,
+        total: price,
+        totalMax: hasRange ? priceMax : null,
         notes: quoteMessage || undefined,
         meta: { Reference: refId, Date: b.date, Time: b.timeSlot, 'Confirm booking': acceptUrl },
       });
@@ -579,9 +600,10 @@ export const sendBookingQuote = async (req: Request, res: Response): Promise<voi
     }
 
     res.json({ success: true, booking });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error sending booking quote:', error);
-    res.status(500).json({ error: 'Failed to send quote' });
+    const msg = error?.message || error?.error?.message || 'Failed to send quote';
+    res.status(500).json({ error: msg, details: error?.details || error?.hint || undefined });
   }
 };
 

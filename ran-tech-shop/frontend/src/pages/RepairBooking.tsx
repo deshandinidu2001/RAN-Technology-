@@ -81,6 +81,10 @@ const getPriceDisplay = (s: Product) => {
   return { mode, label: `Rs. ${formatPrice(min)}` };
 };
 
+// Phone input must be exactly 10 digits (LK local format, e.g. 0701234567).
+const sanitizePhone = (raw: string) => raw.replace(/\D/g, '').slice(0, 10);
+const isValidLkPhone = (raw: string) => /^\d{10}$/.test(sanitizePhone(raw));
+
 const getServiceCompatibleIds = (s: Product): string[] => {
   const raw = (s as any).compatibility;
   if (!raw) return [];
@@ -116,11 +120,12 @@ const partKindToQuery = (kind: AutoPartKind): Record<string, string> | null => {
   }
 };
 
-// True if a service requires the customer to pick a part before booking —
-// either the admin pinned compatible products or the service name implies
-// an inventory-backed part (RAM/SSD/etc).
+// True if a service requires the customer to pick a part before booking.
+// Strict: only when the admin explicitly pinned compatible products on the
+// service. No auto-detection fallback — services without pinned parts are
+// booked as-is.
 const serviceNeedsPart = (s: Product): boolean =>
-  getServiceCompatibleIds(s).length > 0 || detectAutoPartKind(s) !== null;
+  getServiceCompatibleIds(s).length > 0;
 
 const getAvailableDates = () => {
   const dates = [];
@@ -337,22 +342,20 @@ const RepairBooking: React.FC = () => {
   const isQuoteRequest = hasQuoteService;
   const STEPS = hasQuoteService() ? STEPS_QUOTE : STEPS_FIXED;
 
-  // Open the part-picker for a service. Prefer the admin-pinned compatibility
-  // list; if it's empty, fall back to an auto-detected catalog query so the
-  // customer still gets to choose a RAM/SSD/etc. from shop inventory.
+  // Open the part-picker for a service. Strict: only opens when the admin
+  // explicitly pinned compatible products. No auto-detection fallback — we
+  // never show unrelated catalog items.
   const openPartPicker = (svc: Product) => {
     const compatibleProductIds = getServiceCompatibleIds(svc);
-    const autoKind = detectAutoPartKind(svc);
-    const autoQuery = compatibleProductIds.length === 0 ? partKindToQuery(autoKind) : null;
-    if (compatibleProductIds.length === 0 && !autoQuery) return;
+    if (compatibleProductIds.length === 0) return;
     setPickerService({
       service: svc,
       config: {
-        kind: (autoKind || 'generic') as any,
+        kind: 'generic' as any,
         serviceName: svc.name,
         servicePrice: normalizePrice(svc.price),
-        productQuery: autoQuery || {},
-        compatibleProductIds: compatibleProductIds.length ? compatibleProductIds : undefined,
+        productQuery: {},
+        compatibleProductIds,
       },
     });
   };
@@ -954,9 +957,17 @@ const RepairBooking: React.FC = () => {
                       <Phone className="w-3.5 h-3.5 text-white/20" />
                       <label className="text-xs text-white/30 uppercase tracking-wider">Phone</label>
                     </div>
-                    <input type="tel" value={customerPhone} onChange={e => setCustomerPhone(e.target.value)}
+                    <input type="tel" inputMode="numeric" maxLength={10}
+                      value={customerPhone}
+                      onChange={e => setCustomerPhone(sanitizePhone(e.target.value))}
+                      placeholder="0701234567"
                       className="w-full py-4 bg-transparent border-b border-white/10 text-white text-sm placeholder-white/20 focus:border-white/40 focus:outline-none transition-colors"
                     />
+                    {customerPhone.length > 0 && !isValidLkPhone(customerPhone) && (
+                      <p className="text-red-400/70 text-[11px] mt-2">
+                        Enter a 10-digit phone number (e.g. 0701234567).
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -964,7 +975,7 @@ const RepairBooking: React.FC = () => {
                   <button onClick={() => setStep(3)}
                     className="flex items-center gap-3 px-8 py-4 border border-white/10 text-white text-sm font-medium hover:bg-white/5 transition-colors"
                   ><ArrowLeft className="w-4 h-4" /> Back</button>
-                  <button onClick={() => setStep(5)} disabled={!customerName || !customerEmail || !customerPhone}
+                  <button onClick={() => setStep(5)} disabled={!customerName || !customerEmail || !isValidLkPhone(customerPhone)}
                     className="group flex items-center gap-3 px-8 py-4 bg-white text-black text-sm font-medium disabled:opacity-20 disabled:cursor-not-allowed transition-opacity"
                   >Continue <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" /></button>
                 </div>
@@ -1008,9 +1019,17 @@ const RepairBooking: React.FC = () => {
                       <Phone className="w-3.5 h-3.5 text-white/20" />
                       <label className="text-xs text-white/30 uppercase tracking-wider">Phone</label>
                     </div>
-                    <input type="tel" value={customerPhone} onChange={e => setCustomerPhone(e.target.value)}
+                    <input type="tel" inputMode="numeric" maxLength={10}
+                      value={customerPhone}
+                      onChange={e => setCustomerPhone(sanitizePhone(e.target.value))}
+                      placeholder="0701234567"
                       className="w-full py-4 bg-transparent border-b border-white/10 text-white text-sm placeholder-white/20 focus:border-white/40 focus:outline-none transition-colors"
                     />
+                    {customerPhone.length > 0 && !isValidLkPhone(customerPhone) && (
+                      <p className="text-red-400/70 text-[11px] mt-2">
+                        Enter a 10-digit phone number (e.g. 0701234567).
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -1018,7 +1037,7 @@ const RepairBooking: React.FC = () => {
                   <button onClick={() => setStep(3)}
                     className="flex items-center gap-3 px-8 py-4 border border-white/10 text-white text-sm font-medium hover:bg-white/5 transition-colors"
                   ><ArrowLeft className="w-4 h-4" /> Back</button>
-                  <button onClick={() => setStep(5)} disabled={!customerName || !customerEmail || !customerPhone}
+                  <button onClick={() => setStep(5)} disabled={!customerName || !customerEmail || !isValidLkPhone(customerPhone)}
                     className="group flex items-center gap-3 px-8 py-4 bg-white text-black text-sm font-medium disabled:opacity-20 disabled:cursor-not-allowed transition-opacity"
                   >Continue <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" /></button>
                 </div>

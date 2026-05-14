@@ -545,6 +545,12 @@ const AdminDashboard: React.FC = () => {
   const displayBookings = filteredBookings;
 
   const blockedSlots = getBlockedSlotsForDate(selectedDate);
+  // Slots a customer has already booked on the selected date — these should
+  // appear as "Booked" in the admin time-slot view, not "Available".
+  const bookedSlotsForDate = liveBookings
+    .filter(b => b.bookedDate === selectedDate && !!b.timeSlot && b.currentStage < 5)
+    .map(b => ({ slot: b.timeSlot!, customer: b.customerName, ticketId: b.ticketId, serialNo: b.serialNo }));
+  const bookedSlotNames = new Set(bookedSlotsForDate.map(x => x.slot));
 
   // Filter products (non-services) based on search
   const filteredProducts = dbProducts.filter(p =>
@@ -814,7 +820,17 @@ const AdminDashboard: React.FC = () => {
                       </div>
                       <p className="text-white font-medium">{repair.deviceType} - {repair.deviceModel}</p>
                       <p className="text-white/50 text-sm">{repair.customerName} • {repair.customerPhone}</p>
-                      <p className="text-white/40 text-xs mt-1">Booked: {repair.bookedDate} | Est: {repair.estimatedCompletion}</p>
+                      {repair.customerEmail && (
+                        <p className="text-white/40 text-xs">{repair.customerEmail}</p>
+                      )}
+                      <p className="text-white/40 text-xs mt-1">
+                        Booked: {repair.bookedDate}
+                        {repair.timeSlot && <span className="text-primary/80 ml-1">@ {repair.timeSlot}</span>}
+                        {' | Est: '}{repair.estimatedCompletion}
+                      </p>
+                      {repair.services && repair.services.length > 0 && (
+                        <p className="text-white/40 text-xs mt-0.5">Services: {repair.services.join(', ')}</p>
+                      )}
                     </div>
                     <div className="flex items-center gap-2">
                       <button
@@ -1398,32 +1414,45 @@ const AdminDashboard: React.FC = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 {timeSlots.map((slot) => {
                   const isBlocked = blockedSlots.includes(slot);
+                  const isBooked = bookedSlotNames.has(slot);
+                  const bookingForSlot = bookedSlotsForDate.find(x => x.slot === slot);
                   return (
                     <button
                       key={slot}
                       onClick={() => {
+                        if (isBooked) {
+                          alert(`This slot is already booked by ${bookingForSlot?.customer || 'a customer'}. Cancel the repair to free it.`);
+                          return;
+                        }
                         if (isBlocked) {
                           unblockTimeSlot(selectedDate, slot);
                         } else {
                           blockTimeSlot(selectedDate, slot);
                         }
                       }}
-                      className={`p-4  border transition-all ${
-                        isBlocked
-                          ? 'bg-red-500/20 border-red-500/50 text-red-400'
-                          : 'bg-green-500/10 border-green-500/30 text-green-400 hover:bg-green-500/20'
+                      className={`p-4  border transition-all text-left ${
+                        isBooked
+                          ? 'bg-blue-500/20 border-blue-500/50 text-blue-300 cursor-not-allowed'
+                          : isBlocked
+                            ? 'bg-red-500/20 border-red-500/50 text-red-400'
+                            : 'bg-green-500/10 border-green-500/30 text-green-400 hover:bg-green-500/20'
                       }`}
                     >
-                      <p className="font-medium">{slot}</p>
-                      <p className="text-xs mt-1 opacity-70">
-                        {isBlocked ? '🚫 Blocked' : '✅ Available'}
+                      <p className="font-medium text-center">{slot}</p>
+                      <p className="text-xs mt-1 opacity-80 text-center">
+                        {isBooked ? '📅 Booked' : isBlocked ? '🚫 Blocked' : '✅ Available'}
                       </p>
+                      {isBooked && bookingForSlot && (
+                        <p className="text-[10px] mt-2 opacity-90 text-center">
+                          {bookingForSlot.serialNo != null ? `REP#${bookingForSlot.serialNo}` : `#${bookingForSlot.ticketId.slice(0, 6)}`} · {bookingForSlot.customer}
+                        </p>
+                      )}
                     </button>
                   );
                 })}
               </div>
               <p className="text-white/40 text-sm mt-4">
-                Click a slot to toggle availability. Blocked slots won't be available for booking.
+                Click a free slot to block it manually. Blue slots are already booked by customers and can't be toggled.
               </p>
             </div>
           </div>
@@ -2011,35 +2040,35 @@ const AdminDashboard: React.FC = () => {
                         <input type="hidden" name="priceMode" value={svcFormPriceMode} />
                       </div>
 
-                      {/* Step D: Price inputs */}
-                      <div>
-                        <label className="block text-white/50 text-[10px] tracking-[0.3em] uppercase font-medium mb-2">
-                          Step 4 · Price{svcFormPriceMode === 'quote' ? ' (hidden until quoted)' : ''}
-                        </label>
-                        <div className="grid sm:grid-cols-2 gap-3">
-                          <div>
-                            <label className="block text-white/60 text-xs mb-1">
-                              {svcFormPriceMode === 'range' ? 'Min price (Rs.)' : 'Price (Rs.)'}
-                              {svcFormPriceMode !== 'quote' && ' *'}
-                            </label>
-                            <input
-                              type="number"
-                              name="price"
-                              defaultValue={selectedProduct?.price ?? (svcFormPriceMode === 'quote' ? 0 : '')}
-                              required={svcFormPriceMode !== 'quote'}
-                              min="0"
-                              step="0.01"
-                              className="w-full px-4 py-2.5 bg-black border border-white/15 text-white focus:outline-none focus:border-white/60"
-                              placeholder="0.00"
-                            />
+                      {/* Step D: Price inputs (hidden entirely for quote-on-inspection mode) */}
+                      {svcFormPriceMode === 'quote' ? (
+                        <div>
+                          <label className="block text-white/50 text-[10px] tracking-[0.3em] uppercase font-medium mb-2">
+                            Step 4 · Quotation required
+                          </label>
+                          <input type="hidden" name="price" value="0" />
+                          <div className="border border-white/10 bg-black p-4">
+                            <p className="text-white text-sm font-semibold mb-1">No price set up front</p>
+                            <p className="text-white/50 text-xs leading-relaxed">
+                              Customer sees "Quote on inspection" — they submit a request,
+                              you reply with the price from the Quote Requests panel, then they confirm the booking.
+                            </p>
                           </div>
-                          {svcFormPriceMode === 'range' && (
+                        </div>
+                      ) : (
+                        <div>
+                          <label className="block text-white/50 text-[10px] tracking-[0.3em] uppercase font-medium mb-2">
+                            Step 4 · Price
+                          </label>
+                          <div className="grid sm:grid-cols-2 gap-3">
                             <div>
-                              <label className="block text-white/60 text-xs mb-1">Max price (Rs.) *</label>
+                              <label className="block text-white/60 text-xs mb-1">
+                                {svcFormPriceMode === 'range' ? 'Min price (Rs.)' : 'Price (Rs.)'} *
+                              </label>
                               <input
                                 type="number"
-                                name="priceMax"
-                                defaultValue={(selectedProduct as any)?.priceMax ?? ''}
+                                name="price"
+                                defaultValue={selectedProduct?.price ?? ''}
                                 required
                                 min="0"
                                 step="0.01"
@@ -2047,14 +2076,24 @@ const AdminDashboard: React.FC = () => {
                                 placeholder="0.00"
                               />
                             </div>
-                          )}
+                            {svcFormPriceMode === 'range' && (
+                              <div>
+                                <label className="block text-white/60 text-xs mb-1">Max price (Rs.) *</label>
+                                <input
+                                  type="number"
+                                  name="priceMax"
+                                  defaultValue={(selectedProduct as any)?.priceMax ?? ''}
+                                  required
+                                  min="0"
+                                  step="0.01"
+                                  className="w-full px-4 py-2.5 bg-black border border-white/15 text-white focus:outline-none focus:border-white/60"
+                                  placeholder="0.00"
+                                />
+                              </div>
+                            )}
+                          </div>
                         </div>
-                        {svcFormPriceMode === 'quote' && (
-                          <p className="text-white/40 text-[11px] mt-2">
-                            Customer sees "Quote on inspection" — they submit a request, you reply with the price, then they confirm the booking.
-                          </p>
-                        )}
-                      </div>
+                      )}
                     </div>
                   )}
 

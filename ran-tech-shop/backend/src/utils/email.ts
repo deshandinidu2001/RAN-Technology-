@@ -28,6 +28,7 @@ export interface QuoteLineItem {
   description?: string;
   quantity?: number;
   price: number;
+  priceMax?: number | null;
 }
 
 export interface QuotePayload {
@@ -36,8 +37,10 @@ export interface QuotePayload {
   type: 'repair' | 'build' | 'cart';
   items: QuoteLineItem[];
   subtotal: number;
+  subtotalMax?: number | null;
   tax?: number;
   total: number;
+  totalMax?: number | null;
   notes?: string;
   meta?: Record<string, string | undefined>;
 }
@@ -49,15 +52,33 @@ const renderHtml = (q: QuotePayload): string => {
     : q.type === 'build' ? 'Custom PC Build Quotation'
     : 'Cart Price Quotation';
 
-  const rows = q.items.map(i => `
+  const fmtAmount = (price: number, priceMax: number | null | undefined, qty: number) => {
+    if (priceMax != null && priceMax > price) {
+      return `${fmtRs(price * qty)} – ${fmtRs(priceMax * qty)}`;
+    }
+    return fmtRs(price * qty);
+  };
+
+  const rows = q.items.map(i => {
+    const qty = i.quantity ?? 1;
+    return `
     <tr>
       <td style="padding:10px 12px;border-bottom:1px solid #eee;color:#222;">
         <div style="font-weight:500;">${i.name}</div>
         ${i.description ? `<div style="font-size:12px;color:#888;">${i.description}</div>` : ''}
+        ${i.priceMax != null && i.priceMax > i.price ? `<div style="font-size:11px;color:#666;margin-top:4px;text-transform:uppercase;letter-spacing:0.05em;">Estimated range</div>` : ''}
       </td>
-      <td style="padding:10px 12px;border-bottom:1px solid #eee;text-align:center;color:#444;">${i.quantity ?? 1}</td>
-      <td style="padding:10px 12px;border-bottom:1px solid #eee;text-align:right;color:#222;font-family:monospace;">${fmtRs(i.price * (i.quantity ?? 1))}</td>
-    </tr>`).join('');
+      <td style="padding:10px 12px;border-bottom:1px solid #eee;text-align:center;color:#444;">${qty}</td>
+      <td style="padding:10px 12px;border-bottom:1px solid #eee;text-align:right;color:#222;font-family:monospace;">${fmtAmount(i.price, i.priceMax, qty)}</td>
+    </tr>`;
+  }).join('');
+
+  const subtotalDisplay = q.subtotalMax != null && q.subtotalMax > q.subtotal
+    ? `${fmtRs(q.subtotal)} – ${fmtRs(q.subtotalMax)}`
+    : fmtRs(q.subtotal);
+  const totalDisplay = q.totalMax != null && q.totalMax > q.total
+    ? `${fmtRs(q.total)} – ${fmtRs(q.totalMax)}`
+    : fmtRs(q.total);
 
   const isUrl = (s: string) => /^https?:\/\//i.test(s);
   const ctaEntries = q.meta
@@ -98,9 +119,9 @@ const renderHtml = (q: QuotePayload): string => {
         </table>
 
         <table style="width:100%;margin-top:16px;border-collapse:collapse;">
-          <tr><td style="padding:4px 12px;color:#666;font-size:13px;text-align:right;">Subtotal</td><td style="padding:4px 12px;text-align:right;font-family:monospace;color:#222;width:140px;">${fmtRs(q.subtotal)}</td></tr>
+          <tr><td style="padding:4px 12px;color:#666;font-size:13px;text-align:right;">Subtotal</td><td style="padding:4px 12px;text-align:right;font-family:monospace;color:#222;width:180px;">${subtotalDisplay}</td></tr>
           ${q.tax ? `<tr><td style="padding:4px 12px;color:#666;font-size:13px;text-align:right;">Tax</td><td style="padding:4px 12px;text-align:right;font-family:monospace;color:#222;">${fmtRs(q.tax)}</td></tr>` : ''}
-          <tr><td style="padding:10px 12px;border-top:2px solid #000;text-align:right;font-weight:600;color:#000;">Total</td><td style="padding:10px 12px;border-top:2px solid #000;text-align:right;font-family:monospace;font-weight:700;font-size:16px;color:#000;">${fmtRs(q.total)}</td></tr>
+          <tr><td style="padding:10px 12px;border-top:2px solid #000;text-align:right;font-weight:600;color:#000;">${q.totalMax != null && q.totalMax > q.total ? 'Estimated total' : 'Total'}</td><td style="padding:10px 12px;border-top:2px solid #000;text-align:right;font-family:monospace;font-weight:700;font-size:16px;color:#000;">${totalDisplay}</td></tr>
         </table>
 
         ${q.notes ? `<div style="margin-top:24px;padding:14px;background:#fafafa;border-left:3px solid #000;color:#444;font-size:13px;"><strong style="display:block;margin-bottom:4px;">Notes</strong>${q.notes}</div>` : ''}
