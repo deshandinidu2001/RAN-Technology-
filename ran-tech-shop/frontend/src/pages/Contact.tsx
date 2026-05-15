@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
+import api from '../utils/api';
 
 const fade = {
   initial: { opacity: 0, y: 20 },
@@ -33,23 +34,40 @@ const Contact: React.FC = () => {
     }
   }, [user]);
 
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isAuthenticated) {
       navigate('/login', { state: { from: '/contact' } });
       return;
     }
+    if (!formData.message.trim()) {
+      setSubmitError('Please write a message before sending.');
+      return;
+    }
     setIsSubmitting(true);
-    await new Promise((r) => setTimeout(r, 1500));
-    setIsSubmitting(false);
-    setSubmitted(true);
-    setFormData({
-      name: user?.name || '',
-      email: user?.email || '',
-      subject: '',
-      message: '',
-    });
-    setTimeout(() => setSubmitted(false), 5000);
+    setSubmitError(null);
+    try {
+      await api.post('/contact', {
+        name: formData.name,
+        email: formData.email,
+        subject: formData.subject || undefined,
+        message: formData.message,
+      });
+      setSubmitted(true);
+      setFormData({
+        name: user?.name || '',
+        email: user?.email || '',
+        subject: '',
+        message: '',
+      });
+      setTimeout(() => setSubmitted(false), 5000);
+    } catch (err: any) {
+      setSubmitError(err?.response?.data?.error || 'Failed to send. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleChange = (
@@ -107,9 +125,9 @@ const Contact: React.FC = () => {
   ];
 
   const faqs = [
-    { q: 'What are your shipping options?', a: 'Standard (3-5 days), express (1-2 days), and same-day delivery within Sri Lanka.' },
-    { q: 'What is your return policy?', a: 'We accept returns within 30 days of purchase for unused items in original packaging. Full refund guaranteed.' },
-    { q: 'How can I track my order?', a: "Once shipped, you'll receive an email and SMS with tracking info to monitor delivery in real-time." },
+    { q: 'How do I buy a product?', a: 'Add items to your cart and request a price quotation by email. We will reply with the final price — visit our Bibile shop to complete the purchase. We do not accept online payments or offer delivery.' },
+    { q: 'What is your return policy?', a: 'We accept returns within 30 days of purchase for unused items in original packaging. Bring the item and your receipt to the shop.' },
+    { q: 'Where are you located?', a: 'Bibile, Sri Lanka. Call 070 343 9842 for directions and shop hours.' },
     { q: 'Do you offer warranty on products?', a: 'All products come with manufacturer warranty. Extended plans available on select items.' },
     { q: 'Do you provide repair services?', a: 'Yes, laptop, desktop, smartphone, and peripheral repairs. Visit the Repair page or call 070 343 9842.' },
   ];
@@ -363,6 +381,9 @@ const Contact: React.FC = () => {
                           placeholder="Tell us what's on your mind…"
                         />
                       </div>
+                      {submitError && (
+                        <p className="text-red-400 text-xs">{submitError}</p>
+                      )}
                       <button
                         type="submit"
                         disabled={isSubmitting}

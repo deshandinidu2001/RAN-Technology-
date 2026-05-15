@@ -126,10 +126,43 @@ export const createBooking = async (req: Request, res: Response): Promise<void> 
     if (error || !booking) throw error ?? new Error('Insert returned no row');
 
     const isQuote = requestType === 'quote';
+    const b: any = booking;
+    const refId = b.serialNo ? `REP#${b.serialNo}` : b.id.slice(0, 6);
     const smsBody = isQuote
-      ? `RAN Tech Shop: Repair quote requested for ${deviceType}${deviceModel ? ` (${deviceModel})` : ''}. We'll send your price soon. Ref ${(booking as any).id.slice(0, 6)}.`
-      : `RAN Tech Shop: Repair booking confirmed for ${(booking as any).date} ${(booking as any).timeSlot}. Ref ${(booking as any).id.slice(0, 6)}.`;
+      ? `RAN Tech Shop: Repair quote requested for ${deviceType}${deviceModel ? ` (${deviceModel})` : ''}. We'll send your price soon. Ref ${refId}.`
+      : `RAN Tech Shop: Repair booking confirmed. Bring your ${deviceType}${deviceModel ? ` (${deviceModel})` : ''} on ${b.date} at ${b.timeSlot}. Reminder: please arrive on time. Ref ${refId}.`;
     sendSms(customerPhone, smsBody).catch(() => {});
+
+    // Drop an in-app notification so the customer sees it on their profile too.
+    supabase.from('Notification').insert({
+      email: customerEmail,
+      title: isQuote ? 'Quote request received' : 'Repair booking confirmed',
+      body: isQuote
+        ? `We received your quote request for ${deviceType}. We'll reply with a price shortly.`
+        : `Your repair appointment is set for ${b.date} at ${b.timeSlot}. Reference ${refId}.`,
+      link: `/repair/profile`,
+      type: 'booking',
+      refId: b.id,
+    }).then(() => {}, () => {});
+
+    // Email the customer their booking confirmation (best-effort).
+    if (!isQuote && customerEmail) {
+      const device = `${deviceType}${deviceModel ? ` (${deviceModel})` : ''}`;
+      sendQuoteEmail({
+        to: customerEmail,
+        customerName: customerName || 'Customer',
+        type: 'repair',
+        items: [{
+          name: `Repair appointment — ${device}`,
+          description: `Booked for ${b.date} at ${b.timeSlot}.`,
+          price: Number(b.estimatedCost ?? 0),
+        }],
+        subtotal: Number(b.estimatedCost ?? 0),
+        total: Number(b.estimatedCost ?? 0),
+        notes: 'We will send you a reminder the day before your appointment. Please arrive on time.',
+        meta: { Reference: refId, Date: b.date, Time: b.timeSlot },
+      }).catch(() => {});
+    }
 
     res.status(201).json({
       success: true,
@@ -688,5 +721,66 @@ export const getRepairServices = async (req: Request, res: Response): Promise<vo
   } catch (error) {
     console.error('Error getting repair services:', error);
     res.status(500).json({ error: 'Failed to get repair services' });
+  }
+};
+
+// Admin sends a custom SMS + in-app message to the customer for a booking.
+// POST /api/repairs/admin/booking/:id/message   body: { message: string, sendEmail?: boolean }
+export const sendCustomMessage = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { message, sendEmail } = req.body || {};
+
+    if (!message || typeof message !== 'string' || !message.trim()) {
+      res.status(400).json({ error: 'Message is required' });
+      return;
+    }
+    const text = message.trim().slice(0, 320);
+
+    const { data: booking, error } = await supabase
+      .from('RepairBooking')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+    if (error) throw error;
+    if (!booking) {
+      res.status(404).json({ error: 'Booking not found' });
+      return;
+    }
+
+    const b: any = booking;
+    const refId = b.serialNo ? `REP#${b.serialNo}` : (b.id as string).slice(0, 6);
+
+    let smsResult: { ok: boolean; error?: string } = { ok: false, error: 'No phone on file' };
+    if (b.customerPhone) {
+      smsResult = await sendSms(b.customerPhone, `RAN Tech Shop (${refId}): ${text}`);
+    }
+
+    supabase.from('Notification').insert({
+      email: b.customerEmail,
+      title: 'Message from RAN Tech Shop',
+      body: text,
+      link: `/repair/profile`,
+      type: 'message',
+      refId: b.id,
+    }).then(() => {}, () => {});
+
+    let emailResult: { ok: boolean; error?: string } | null = null;
+    if (sendEmail && b.customerEmail) {
+      emailResult = await sendQuoteEmail({
+        to: b.customerEmail,
+        customerName: b.customerName || 'Customer',
+        type: 'repair',
+        items: [{ name: 'Message regarding your repair', description: text, price: 0 }],
+        subtotal: 0,
+        total: 0,
+        meta: { Reference: refId },
+      });
+    }
+
+    res.json({ success: true, sms: smsResult, email: emailResult });
+  } catch (err) {
+    console.error('Error sending custom message:', err);
+    res.status(500).json({ error: 'Failed to send message' });
   }
 };

@@ -8,7 +8,7 @@ import api from '../utils/api';
 import RepairCategoryManager from '../components/admin/RepairCategoryManager';
 import QuoteRequestsPanel from '../components/admin/QuoteRequestsPanel';
 
-type TabType = 'repairs' | 'quote-requests' | 'history' | 'orders' | 'products' | 'services' | 'repair-categories' | 'categories' | 'users' | 'timeslots' | 'settings';
+type TabType = 'repairs' | 'quote-requests' | 'history' | 'orders' | 'products' | 'services' | 'repair-categories' | 'categories' | 'users' | 'timeslots' | 'messages' | 'settings';
 
 const repairStages = ['Received', 'Diagnosing', 'Waiting for Parts', 'Repairing', 'Ready for Pickup', 'Collected'];
 const technicians = ['Kasun Silva', 'Nimesh Jayawardena', 'Pradeep Fernando', 'Ruwan Perera'];
@@ -323,18 +323,29 @@ const AdminDashboard: React.FC = () => {
     }
   }, [isAdminAuthenticated, fetchProducts, fetchUsers, fetchBookings, fetchOrders, fetchFilterCategories]);
 
+  const fetchContactMessages = useCallback(async () => {
+    try {
+      const res = await api.get('/contact/admin');
+      setContactMessages(res.data?.messages || []);
+    } catch (err) {
+      console.warn('Failed to load contact messages', err);
+    }
+  }, []);
+
   // Auto-refresh data every 3s while admin dashboard is open.
   // Filter categories don't poll — they change rarely and refetch on save.
   useEffect(() => {
     if (!isAdminAuthenticated) return;
+    fetchContactMessages();
     const interval = setInterval(() => {
       fetchProducts();
       fetchUsers();
       fetchBookings();
       fetchOrders();
+      fetchContactMessages();
     }, 3000);
     return () => clearInterval(interval);
-  }, [isAdminAuthenticated, fetchProducts, fetchUsers, fetchBookings, fetchOrders]);
+  }, [isAdminAuthenticated, fetchProducts, fetchUsers, fetchBookings, fetchOrders, fetchContactMessages]);
 
   const handleDeleteProduct = async (product: Product) => {
     if (!confirm(`Delete ${product.name}?`)) return;
@@ -388,6 +399,26 @@ const AdminDashboard: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<TabType>('repairs');
   const [selectedRepair, setSelectedRepair] = useState<RepairBooking | null>(null);
+  const [messageTarget, setMessageTarget] = useState<RepairBooking | null>(null);
+  const [messageDraft, setMessageDraft] = useState('');
+  const [messageAlsoEmail, setMessageAlsoEmail] = useState(false);
+  const [messageSending, setMessageSending] = useState(false);
+  // Customer contact-form messages (inbox + reply).
+  interface ContactMessage {
+    id: string;
+    name: string;
+    email: string;
+    subject: string | null;
+    message: string;
+    adminReply: string | null;
+    repliedAt: string | null;
+    read: boolean;
+    createdAt: string;
+  }
+  const [contactMessages, setContactMessages] = useState<ContactMessage[]>([]);
+  const [replyTarget, setReplyTarget] = useState<ContactMessage | null>(null);
+  const [replyDraft, setReplyDraft] = useState('');
+  const [replySending, setReplySending] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [showProductForm, setShowProductForm] = useState(false);
@@ -546,9 +577,12 @@ const AdminDashboard: React.FC = () => {
 
   const blockedSlots = getBlockedSlotsForDate(selectedDate);
   // Slots a customer has already booked on the selected date — these should
-  // appear as "Booked" in the admin time-slot view, not "Available".
+  // appear as "Booked" in the admin time-slot view, not "Available". Match the
+  // backend's getAvailability rule: every booking blocks its slot unless it
+  // has been explicitly cancelled. (Completed repairs still occupied the slot
+  // that day, so they stay visible.)
   const bookedSlotsForDate = liveBookings
-    .filter(b => b.bookedDate === selectedDate && !!b.timeSlot && b.currentStage < 5)
+    .filter(b => b.bookedDate === selectedDate && !!b.timeSlot && b.status !== 'cancelled')
     .map(b => ({ slot: b.timeSlot!, customer: b.customerName, ticketId: b.ticketId, serialNo: b.serialNo }));
   const bookedSlotNames = new Set(bookedSlotsForDate.map(x => x.slot));
 
@@ -651,6 +685,7 @@ const AdminDashboard: React.FC = () => {
             { id: 'categories', label: 'Filter Categories', icon: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" /></svg> },
             { id: 'users', label: 'Users', icon: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg> },
             { id: 'timeslots', label: 'Time Slots', icon: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> },
+            { id: 'messages', label: 'Messages', icon: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg> },
             { id: 'settings', label: 'Settings', icon: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg> },
           ].map((tab) => (
             <button
@@ -698,6 +733,7 @@ const AdminDashboard: React.FC = () => {
               {activeTab === 'categories' && 'Filter Categories'}
               {activeTab === 'users' && 'Users'}
               {activeTab === 'timeslots' && 'Time Slots'}
+              {activeTab === 'messages' && 'Messages'}
               {activeTab === 'settings' && 'Settings'}
             </h1>
             <p className="text-white/40 text-xs mt-0.5">Auto-refreshing every 3s</p>
@@ -757,6 +793,7 @@ const AdminDashboard: React.FC = () => {
             { id: 'categories', label: 'Filter Categories', icon: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" /></svg> },
             { id: 'users', label: 'Users', icon: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg> },
             { id: 'timeslots', label: 'Time Slots', icon: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> },
+            { id: 'messages', label: 'Messages', icon: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg> },
             { id: 'settings', label: 'Settings', icon: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg> },
           ].map((tab) => (
             <button
@@ -800,23 +837,38 @@ const AdminDashboard: React.FC = () => {
                 No repairs found
               </div>
             ) : (
-              displayBookings.map((repair) => (
+              displayBookings.map((repair) => {
+                // Days remaining until the appointment (bookedDate is YYYY-MM-DD).
+                const today = new Date(); today.setHours(0,0,0,0);
+                const apptDate = repair.bookedDate ? new Date(repair.bookedDate + 'T00:00:00') : null;
+                const daysRemaining = apptDate ? Math.round((apptDate.getTime() - today.getTime()) / 86400000) : null;
+                const daysLabel =
+                  daysRemaining == null ? null :
+                  daysRemaining < 0 ? `${Math.abs(daysRemaining)} day${Math.abs(daysRemaining) === 1 ? '' : 's'} ago` :
+                  daysRemaining === 0 ? 'Today' :
+                  daysRemaining === 1 ? 'Tomorrow' :
+                  `In ${daysRemaining} days`;
+                const daysTone =
+                  daysRemaining == null ? 'bg-white/5 text-white/50' :
+                  daysRemaining < 0   ? 'bg-red-500/20 text-red-300' :
+                  daysRemaining === 0 ? 'bg-amber-500/20 text-amber-300' :
+                  daysRemaining === 1 ? 'bg-amber-500/10 text-amber-400' :
+                  'bg-emerald-500/10 text-emerald-300';
+                return (
                 <motion.div
                   key={repair.ticketId}
                   layout
                   className="bg-dark-100/50 border border-white/10  p-4 hover:border-primary/30 transition-colors"
                 >
-                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                  <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
                     <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
+                      <div className="flex items-center gap-3 mb-2 flex-wrap">
                         <span className="text-primary font-bold">{repair.serialNo != null ? `REP#${repair.serialNo}` : `#${repair.ticketId.slice(0, 8)}`}</span>
-                        <span className={`text-xs px-2 py-1 rounded-full ${
-                          repair.currentStage === 5 ? 'bg-blue-500/20 text-blue-400' :
-                          repair.currentStage === 4 ? 'bg-green-500/20 text-green-400' :
-                          'bg-amber-500/20 text-amber-400'
-                        }`}>
-                          {repairStages[repair.currentStage]}
-                        </span>
+                        {daysLabel && (
+                          <span className={`text-xs px-2 py-1 rounded-full ${daysTone}`}>
+                            {daysLabel}
+                          </span>
+                        )}
                       </div>
                       <p className="text-white font-medium">{repair.deviceType} - {repair.deviceModel}</p>
                       <p className="text-white/50 text-sm">{repair.customerName} • {repair.customerPhone}</p>
@@ -826,7 +878,6 @@ const AdminDashboard: React.FC = () => {
                       <p className="text-white/40 text-xs mt-1">
                         Booked: {repair.bookedDate}
                         {repair.timeSlot && <span className="text-primary/80 ml-1">@ {repair.timeSlot}</span>}
-                        {' | Est: '}{repair.estimatedCompletion}
                       </p>
                       {repair.services && repair.services.length > 0 && (
                         <p className="text-white/40 text-xs mt-0.5">Services: {repair.services.join(', ')}</p>
@@ -834,8 +885,14 @@ const AdminDashboard: React.FC = () => {
                     </div>
                     <div className="flex items-center gap-2">
                       <button
+                        onClick={() => setMessageTarget(repair)}
+                        className="px-3 py-2 bg-blue-500/10 text-blue-300 hover:bg-blue-500/20 transition-colors text-sm"
+                      >
+                        Send message
+                      </button>
+                      <button
                         onClick={() => setSelectedRepair(repair)}
-                        className="px-3 py-2 bg-primary/10 text-primary  hover:bg-primary/20 transition-colors text-sm"
+                        className="px-3 py-2 bg-primary/10 text-primary hover:bg-primary/20 transition-colors text-sm"
                       >
                         Edit
                       </button>
@@ -850,33 +907,15 @@ const AdminDashboard: React.FC = () => {
                             alert('Failed to delete repair.');
                           }
                         }}
-                        className="px-3 py-2 bg-red-500/10 text-red-400  hover:bg-red-500/20 transition-colors text-sm"
+                        className="px-3 py-2 bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors text-sm"
                       >
                         Delete
                       </button>
                     </div>
                   </div>
-                  {/* Quick Stage Update */}
-                  <div className="mt-4 pt-4 border-t border-white/10">
-                    <p className="text-white/50 text-xs mb-2">Update Stage:</p>
-                    <div className="flex flex-wrap gap-2">
-                      {repairStages.map((stage, idx) => (
-                        <button
-                          key={idx}
-                          onClick={() => handleRepairStageUpdate(repair.ticketId, idx)}
-                          className={`px-3 py-1.5  text-xs transition-colors ${
-                            repair.currentStage === idx
-                              ? 'bg-primary text-dark font-medium'
-                              : 'bg-dark-200/50 text-white/60 hover:text-white'
-                          }`}
-                        >
-                          {stage}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
                 </motion.div>
-              ))
+              );
+            })
             )}
           </div>
         )}
@@ -1458,6 +1497,81 @@ const AdminDashboard: React.FC = () => {
           </div>
         )}
 
+        {/* Messages Tab */}
+        {activeTab === 'messages' && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-white font-semibold text-lg">Customer messages</h3>
+              <span className="text-white/50 text-sm">
+                {contactMessages.filter(m => !m.read).length} unread · {contactMessages.length} total
+              </span>
+            </div>
+            {contactMessages.length === 0 ? (
+              <div className="text-center py-12 text-white/50">No messages yet.</div>
+            ) : (
+              contactMessages.map((m) => (
+                <div
+                  key={m.id}
+                  className={`bg-dark-100/50 border p-4 transition-colors ${
+                    m.read ? 'border-white/10' : 'border-amber-500/40 bg-amber-500/[0.03]'
+                  }`}
+                >
+                  <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-3 mb-1 flex-wrap">
+                        <span className="text-white font-bold">{m.name}</span>
+                        {!m.read && (
+                          <span className="text-[10px] uppercase tracking-wider bg-amber-500/20 text-amber-300 px-2 py-0.5">New</span>
+                        )}
+                        {m.adminReply && (
+                          <span className="text-[10px] uppercase tracking-wider bg-emerald-500/20 text-emerald-300 px-2 py-0.5">Replied</span>
+                        )}
+                        <span className="text-white/40 text-xs">{new Date(m.createdAt).toLocaleString('en-LK')}</span>
+                      </div>
+                      <p className="text-white/60 text-xs">{m.email}</p>
+                      {m.subject && <p className="text-white/70 text-sm mt-2">Subject: {m.subject}</p>}
+                      <p className="text-white text-sm mt-2 whitespace-pre-line">{m.message}</p>
+                      {m.adminReply && (
+                        <div className="mt-3 border-l-2 border-emerald-400/40 pl-3">
+                          <p className="text-emerald-300/80 text-[10px] uppercase tracking-wider">
+                            Your reply · {m.repliedAt && new Date(m.repliedAt).toLocaleString('en-LK')}
+                          </p>
+                          <p className="text-white/80 text-sm whitespace-pre-line">{m.adminReply}</p>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <button
+                        onClick={() => { setReplyTarget(m); setReplyDraft(''); }}
+                        className="px-3 py-2 bg-primary/10 text-primary hover:bg-primary/20 text-sm"
+                      >{m.adminReply ? 'Reply again' : 'Reply'}</button>
+                      <button
+                        onClick={async () => {
+                          try {
+                            await api.patch(`/contact/admin/${m.id}`, { read: !m.read });
+                            fetchContactMessages();
+                          } catch { alert('Failed to update.'); }
+                        }}
+                        className="px-3 py-2 bg-white/5 text-white/70 hover:bg-white/10 text-sm"
+                      >{m.read ? 'Mark unread' : 'Mark read'}</button>
+                      <button
+                        onClick={async () => {
+                          if (!confirm('Delete this message?')) return;
+                          try {
+                            await api.delete(`/contact/admin/${m.id}`);
+                            setContactMessages(prev => prev.filter(x => x.id !== m.id));
+                          } catch { alert('Failed to delete.'); }
+                        }}
+                        className="px-3 py-2 bg-red-500/10 text-red-400 hover:bg-red-500/20 text-sm"
+                      >Delete</button>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
         {/* Settings Tab */}
         {activeTab === 'settings' && (
           <div className="bg-dark-100/50 border border-white/10  p-6 space-y-6">
@@ -1505,6 +1619,139 @@ const AdminDashboard: React.FC = () => {
       </div>
       </main>
 
+      {/* Reply-to-Contact-Message Modal */}
+      <AnimatePresence>
+        {replyTarget && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => { setReplyTarget(null); setReplyDraft(''); }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-dark-100 border border-white/10 p-6 w-full max-w-lg"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="text-white text-lg font-bold mb-1">Reply to {replyTarget.name}</h3>
+              <p className="text-white/50 text-xs mb-3">{replyTarget.email}</p>
+              <div className="bg-black/40 border border-white/10 p-3 mb-3 max-h-32 overflow-y-auto">
+                {replyTarget.subject && (
+                  <p className="text-white/70 text-xs mb-1">Subject: {replyTarget.subject}</p>
+                )}
+                <p className="text-white/80 text-sm whitespace-pre-line">{replyTarget.message}</p>
+              </div>
+              <textarea
+                value={replyDraft}
+                onChange={(e) => setReplyDraft(e.target.value.slice(0, 4000))}
+                rows={6}
+                placeholder="Write your reply…"
+                className="w-full px-3 py-2.5 bg-black border border-white/15 text-white placeholder:text-white/30 focus:outline-none focus:border-white/50"
+              />
+              <p className="text-white/40 text-[10px] mt-1">Reply will be emailed to the customer.</p>
+              <div className="flex justify-end gap-2 mt-4">
+                <button
+                  onClick={() => { setReplyTarget(null); setReplyDraft(''); }}
+                  className="px-4 py-2 border border-white/15 text-white/70 hover:text-white text-sm"
+                >Cancel</button>
+                <button
+                  disabled={replySending || !replyDraft.trim()}
+                  onClick={async () => {
+                    if (!replyTarget) return;
+                    setReplySending(true);
+                    try {
+                      const res = await api.post(`/contact/admin/${replyTarget.id}/reply`, { reply: replyDraft.trim() });
+                      alert(res.data?.emailSent
+                        ? 'Reply sent.'
+                        : `Reply saved, but email failed: ${res.data?.emailError || 'unknown error'}`);
+                      setReplyTarget(null);
+                      setReplyDraft('');
+                      fetchContactMessages();
+                    } catch (err: any) {
+                      alert(err?.response?.data?.error || 'Failed to send reply.');
+                    } finally {
+                      setReplySending(false);
+                    }
+                  }}
+                  className="px-5 py-2 bg-primary text-dark font-semibold hover:bg-primary/90 disabled:opacity-50 text-sm"
+                >{replySending ? 'Sending…' : 'Send reply'}</button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Send Custom Message Modal */}
+      <AnimatePresence>
+        {messageTarget && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => { setMessageTarget(null); setMessageDraft(''); setMessageAlsoEmail(false); }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-dark-100 border border-white/10 p-6 w-full max-w-lg"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="text-white text-lg font-bold mb-1">Send a message</h3>
+              <p className="text-white/50 text-xs mb-4">
+                To {messageTarget.customerName} · {messageTarget.customerPhone}
+                {messageTarget.customerEmail ? ` · ${messageTarget.customerEmail}` : ''}
+              </p>
+              <textarea
+                value={messageDraft}
+                onChange={(e) => setMessageDraft(e.target.value.slice(0, 320))}
+                rows={5}
+                placeholder="e.g. Your device is ready for pickup. We're open until 6 PM today."
+                className="w-full px-3 py-2.5 bg-black border border-white/15 text-white placeholder:text-white/30 focus:outline-none focus:border-white/50"
+              />
+              <div className="flex items-center justify-between mt-2">
+                <label className="flex items-center gap-2 text-white/60 text-xs cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={messageAlsoEmail}
+                    onChange={(e) => setMessageAlsoEmail(e.target.checked)}
+                  />
+                  Also send by email
+                </label>
+                <span className="text-white/40 text-[10px]">{messageDraft.length}/320</span>
+              </div>
+              <div className="flex justify-end gap-2 mt-4">
+                <button
+                  onClick={() => { setMessageTarget(null); setMessageDraft(''); setMessageAlsoEmail(false); }}
+                  className="px-4 py-2 border border-white/15 text-white/70 hover:text-white text-sm"
+                >Cancel</button>
+                <button
+                  disabled={messageSending || !messageDraft.trim()}
+                  onClick={async () => {
+                    if (!messageTarget) return;
+                    setMessageSending(true);
+                    try {
+                      const res = await api.post(`/repairs/admin/booking/${messageTarget.ticketId}/message`, {
+                        message: messageDraft.trim(),
+                        sendEmail: messageAlsoEmail,
+                      });
+                      const smsOk = res.data?.sms?.ok;
+                      alert(smsOk
+                        ? 'Message sent.'
+                        : `SMS could not be delivered: ${res.data?.sms?.error || 'unknown error'}. In-app notification was still recorded.`);
+                      setMessageTarget(null);
+                      setMessageDraft('');
+                      setMessageAlsoEmail(false);
+                    } catch (err: any) {
+                      alert(err?.response?.data?.error || 'Failed to send message.');
+                    } finally {
+                      setMessageSending(false);
+                    }
+                  }}
+                  className="px-5 py-2 bg-primary text-dark font-semibold hover:bg-primary/90 disabled:opacity-50 text-sm"
+                >{messageSending ? 'Sending…' : 'Send'}</button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Repair Edit Modal */}
       <AnimatePresence>
         {selectedRepair && (
@@ -1533,23 +1780,6 @@ const AdminDashboard: React.FC = () => {
               </div>
 
               <div className="space-y-4">
-                <div>
-                  <label className="block text-white/70 text-sm mb-2">Stage</label>
-                  <select
-                    value={selectedRepair.currentStage}
-                    onChange={(e) => {
-                      const nextStage = Number(e.target.value);
-                      handleRepairStageUpdate(selectedRepair.ticketId, nextStage);
-                      setSelectedRepair({ ...selectedRepair, currentStage: nextStage });
-                    }}
-                    className="w-full px-4 py-3 bg-dark-200/50 border border-white/10  text-white focus:outline-none focus:border-primary/50"
-                  >
-                    {repairStages.map((stage, idx) => (
-                      <option key={idx} value={idx}>{stage}</option>
-                    ))}
-                  </select>
-                </div>
-
                 <div>
                   <label className="block text-white/70 text-sm mb-2">Technician</label>
                   <select
@@ -1995,7 +2225,7 @@ const AdminDashboard: React.FC = () => {
                           {svcFormCategories.length === 0 ? (
                             <div className="text-white/50 text-xs border border-white/10 p-3">
                               No categories yet for <span className="capitalize">{svcFormDevice}</span>. Add some under the
-                              "Repair Categories" tab — then come back here.
+                              "Repair Categories" tab, then come back here.
                             </div>
                           ) : (
                             <select
@@ -2050,7 +2280,7 @@ const AdminDashboard: React.FC = () => {
                           <div className="border border-white/10 bg-black p-4">
                             <p className="text-white text-sm font-semibold mb-1">No price set up front</p>
                             <p className="text-white/50 text-xs leading-relaxed">
-                              Customer sees "Quote on inspection" — they submit a request,
+                              Customer sees "Quote on inspection". They submit a request,
                               you reply with the price from the Quote Requests panel, then they confirm the booking.
                             </p>
                           </div>
@@ -2234,7 +2464,7 @@ const AdminDashboard: React.FC = () => {
                         />
                       </label>
                     </div>
-                    {!mainImageUrl && <p className="text-xs text-red-400/80 mt-1">Required — upload an image to continue.</p>}
+                    {!mainImageUrl && <p className="text-xs text-red-400/80 mt-1">Required. Upload an image to continue.</p>}
                   </div>
 
                   {!(serviceFormMode || (selectedProduct as any)?.isService) && (
@@ -2296,7 +2526,7 @@ const AdminDashboard: React.FC = () => {
                                   </select>
                                   {currentValue && !valueInList && (
                                     <p className="text-amber-400/70 text-[10px] mt-1">
-                                      Current value "{currentValue}" not in dropdown — add it in Filter Categories.
+                                      Current value "{currentValue}" not in dropdown. Add it in Filter Categories.
                                     </p>
                                   )}
                                 </div>
@@ -2349,7 +2579,7 @@ const AdminDashboard: React.FC = () => {
                       <div className="md:col-span-2">
                         <label className="block text-white/70 text-sm mb-2">Compatible Devices (optional)</label>
                         <p className="text-xs text-white/40 mb-2">
-                          For accessories like batteries — pick the laptop models this part fits. The repair page filters batteries by the brand of these laptops.
+                          For accessories like batteries, pick the laptop models this part fits. The repair page filters batteries by the brand of these laptops.
                         </p>
                         <CompatibleProductsPicker
                           allProducts={dbProducts.filter(p => !(p as any).isService && p.category === 'laptops')}
@@ -2845,7 +3075,7 @@ const SpecFieldsEditor: React.FC<{
     <div className="ml-3 my-2 p-4  border border-primary/20 bg-primary/[0.04] space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-white text-sm font-semibold">Specification Dropdowns — {cat.name}</p>
+          <p className="text-white text-sm font-semibold">Specification Dropdowns: {cat.name}</p>
           <p className="text-white/40 text-xs mt-0.5">
             These dropdowns appear in the Add Product form when this category is selected.
           </p>

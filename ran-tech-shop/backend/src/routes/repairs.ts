@@ -15,6 +15,7 @@ import {
   getRepairServices,
   sendBookingQuote,
   acceptQuote,
+  sendCustomMessage,
 } from '../controllers/repairController';
 import { authenticate, optionalAuth } from '../middleware/auth';
 
@@ -39,6 +40,7 @@ router.get('/services', getRepairServices);
 router.get('/admin/bookings', optionalAuth, getAllBookings);
 router.patch('/admin/booking/:id', optionalAuth, updateBookingStatus);
 router.post('/admin/booking/:id/quote', optionalAuth, sendBookingQuote);
+router.post('/admin/booking/:id/message', optionalAuth, sendCustomMessage);
 router.delete('/admin/booking/:id', optionalAuth, deleteBooking);
 router.post('/admin/availability', authenticate, setAvailability);
 router.get('/admin/statistics', optionalAuth, getStatistics);

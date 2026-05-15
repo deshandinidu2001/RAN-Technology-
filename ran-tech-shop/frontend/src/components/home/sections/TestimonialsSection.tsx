@@ -56,7 +56,7 @@ const fallbackReviews = [
     name: 'Sanduni Perera',
     location: 'Wellawaya',
     rating: 5,
-    text: '"The staff is very knowledgeable and friendly. They helped me choose the right accessories for my laptop. The products are genuine and delivery was super fast. Will shop again!"',
+    text: '"The staff is very knowledgeable and friendly. They helped me choose the right accessories for my laptop. The products are genuine and the in-store service was excellent. Will shop again!"',
     initial: 'SP',
     gradient: 'from-[#FF6B35] to-[#F7B500]',
     accent: '#FF6B35',

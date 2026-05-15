@@ -19,7 +19,7 @@ const aboutFeatures = [
   },
   {
     title: 'Fast Service',
-    description: 'Same-day repairs and express delivery options available.',
+    description: 'Same-day repairs available for most common issues.',
     accent: '#FF6B35',
   },
   {
@@ -88,7 +88,7 @@ const AboutSection = () => {
         className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 whitespace-nowrap select-none"
       >
         <span className="text-[20vw] font-black text-white/[0.025] tracking-tighter">
-          TRUSTED · CRAFTED · DELIVERED ·
+          TRUSTED · CRAFTED · TRUSTED ·
         </span>
       </motion.div>
 
@@ -129,7 +129,7 @@ const AboutSection = () => {
             <div className="max-w-xl space-y-2 mb-14 overflow-hidden">
               {[
                 'Since 2015, RAN Technology has been at the forefront of',
-                'delivering premium laptops and expert repair services.',
+                'curating premium laptops and providing expert repair services.',
                 'Built on quality, trusted by thousands across the nation.',
               ].map((line, i) => (
                 <motion.p

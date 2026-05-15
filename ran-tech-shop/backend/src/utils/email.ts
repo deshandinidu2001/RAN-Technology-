@@ -140,6 +140,73 @@ const renderHtml = (q: QuotePayload): string => {
   </body></html>`;
 };
 
+// ─── Customer-message reply email ──────────────────────────────────
+// A plain, conversation-style template used when admin replies to a
+// contact-form message. Deliberately not the quotation template — no
+// table, no Rs. totals, no validity disclaimer.
+export interface ReplyEmailPayload {
+  to: string;
+  customerName: string;
+  subject?: string | null;
+  originalMessage: string;
+  reply: string;
+}
+
+const renderReplyHtml = (r: ReplyEmailPayload): string => {
+  const subjectLine = r.subject ? `Re: ${r.subject}` : 'Reply from RAN Tech Shop';
+  const escape = (s: string) =>
+    s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const replyHtml = escape(r.reply).replace(/\n/g, '<br/>');
+  const originalHtml = escape(r.originalMessage).replace(/\n/g, '<br/>');
+
+  return `<!doctype html><html><body style="margin:0;background:#f5f5f5;font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;">
+    <div style="max-width:640px;margin:24px auto;background:#fff;border:1px solid #e5e5e5;">
+      <div style="background:#000;color:#fff;padding:24px 28px;">
+        <div style="font-size:11px;letter-spacing:0.3em;text-transform:uppercase;color:#999;">RAN Tech Shop</div>
+        <h1 style="margin:6px 0 0;font-weight:400;font-size:22px;">${escape(subjectLine)}</h1>
+      </div>
+      <div style="padding:28px;">
+        <p style="margin:0 0 18px;color:#222;font-size:15px;">Hi ${escape(r.customerName || 'there')},</p>
+
+        <p style="margin:0 0 6px;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Our reply</p>
+        <div style="background:#fafafa;border-left:3px solid #000;padding:14px 16px;color:#222;font-size:14px;line-height:1.6;margin-bottom:24px;">
+          ${replyHtml}
+        </div>
+
+        <p style="margin:0 0 6px;color:#888;font-size:12px;text-transform:uppercase;letter-spacing:0.05em;">Your original message</p>
+        <div style="background:#fafafa;border-left:3px solid #ccc;padding:12px 16px;color:#666;font-size:13px;line-height:1.55;font-style:italic;">
+          ${originalHtml}
+        </div>
+
+        <p style="margin-top:28px;color:#555;font-size:13px;line-height:1.6;">
+          Need anything else? Just reply to this email and we'll get back to you.
+        </p>
+        <p style="margin-top:18px;color:#222;font-size:13px;">— The RAN Tech Shop team</p>
+      </div>
+      <div style="padding:14px 28px;background:#fafafa;color:#999;font-size:11px;text-transform:uppercase;letter-spacing:0.1em;text-align:center;">
+        RAN Tech Shop · Bibile, Sri Lanka
+      </div>
+    </div>
+  </body></html>`;
+};
+
+export const sendReplyEmail = async (r: ReplyEmailPayload): Promise<{ ok: boolean; error?: string }> => {
+  const transporter = buildTransporter();
+  if (!transporter) {
+    console.warn('[email] SMTP not configured; reply email not sent.');
+    return { ok: false, error: 'Email service is not configured on the server.' };
+  }
+  const from = process.env.SMTP_FROM || `RAN Tech Shop <${process.env.SMTP_USER}>`;
+  const subject = r.subject ? `Re: ${r.subject}` : 'Reply from RAN Tech Shop';
+  try {
+    await transporter.sendMail({ from, to: r.to, subject, html: renderReplyHtml(r) });
+    return { ok: true };
+  } catch (err: any) {
+    console.error('[email] sendReplyEmail failed:', err?.message);
+    return { ok: false, error: err?.message || 'Failed to send email' };
+  }
+};
+
 export const sendQuoteEmail = async (q: QuotePayload): Promise<{ ok: boolean; error?: string; previewHtml?: string }> => {
   const transporter = buildTransporter();
   const html = renderHtml(q);

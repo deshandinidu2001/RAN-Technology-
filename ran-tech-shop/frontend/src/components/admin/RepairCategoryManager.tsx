@@ -48,11 +48,35 @@ const RepairCategoryManager: React.FC = () => {
   };
 
   const remove = async (cat: RepairCategory) => {
-    if (!window.confirm(`Delete category "${cat.name}"? Services already tagged keep their tag, but customers won't see this tab.`)) return;
+    if (!window.confirm(`Delete category "${cat.name}"?`)) return;
     try {
       await api.delete(`/repair-categories/${cat.id}`);
       setList(prev => prev.filter(c => c.id !== cat.id));
-    } catch {/* silent */}
+    } catch (err: any) {
+      // 409 from the backend means this category still has services tagged.
+      // Surface the count and let the admin choose to delete those too, or cancel.
+      const status = err?.response?.status;
+      const data = err?.response?.data;
+      if (status === 409 && typeof data?.serviceCount === 'number' && data.serviceCount > 0) {
+        const sampleNames = (data.services || []).slice(0, 5).map((s: any) => `• ${s.name}`).join('\n');
+        const more = data.serviceCount > 5 ? `\n…and ${data.serviceCount - 5} more` : '';
+        const ok = window.confirm(
+          `"${cat.name}" still has ${data.serviceCount} service(s):\n\n${sampleNames}${more}\n\n` +
+          `Delete these services along with the category?\n\n` +
+          `OK = delete category AND all listed services.\n` +
+          `Cancel = keep everything as-is.`
+        );
+        if (!ok) return;
+        try {
+          await api.delete(`/repair-categories/${cat.id}?cascade=services`);
+          setList(prev => prev.filter(c => c.id !== cat.id));
+        } catch {
+          setError('Failed to delete category and its services.');
+        }
+      } else {
+        setError('Failed to delete category.');
+      }
+    }
   };
 
   return (

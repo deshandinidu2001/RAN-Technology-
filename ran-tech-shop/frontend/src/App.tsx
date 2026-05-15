@@ -59,6 +59,21 @@ const RepairReadyNotification: React.FC = () => {
     return () => clearInterval(interval);
   }, [fetchReadyRepairs]);
 
+  // Auto-dismiss every popup 3 seconds after it appears. The notification still
+  // lives in the in-app inbox; this just clears the floating toast.
+  useEffect(() => {
+    const undismissed = readyRepairs.filter((r) => !dismissed.has(r.id));
+    if (undismissed.length === 0) return;
+    const t = setTimeout(() => {
+      setDismissed((prev) => {
+        const next = new Set(prev);
+        undismissed.forEach((r) => next.add(r.id));
+        return next;
+      });
+    }, 3000);
+    return () => clearTimeout(t);
+  }, [readyRepairs, dismissed]);
+
   // Don't show on admin pages
   if (location.pathname.startsWith('/admin')) return null;
 
@@ -180,7 +195,6 @@ const App: React.FC = () => {
           }
         />
       </Routes>
-      <RepairReadyNotification />
     </Router>
   );
 };

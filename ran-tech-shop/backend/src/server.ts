@@ -20,6 +20,7 @@ if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
   ]);
 }
 
+import { startReminderScheduler } from './jobs/repairReminders';
 import authRoutes from './routes/auth';
 import productRoutes from './routes/products';
 import orderRoutes from './routes/orders';
@@ -30,6 +31,7 @@ import uploadRoutes from './routes/uploads';
 import userRoutes from './routes/users';
 import notificationRoutes from './routes/notifications';
 import repairCategoryRoutes from './routes/repairCategories';
+import contactRoutes from './routes/contact';
 
 // Create Express app
 const app: Express = express();
@@ -94,6 +96,7 @@ app.use('/api/filter-categories', filterCategoryRoutes);
 app.use('/api/uploads', uploadRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/repair-categories', repairCategoryRoutes);
+app.use('/api/contact', contactRoutes);
 
 // 404 handler
 app.use((_req: Request, res: Response) => {
@@ -125,6 +128,7 @@ app.listen(PORT, () => {
   ║                                                       ║
   ╚═══════════════════════════════════════════════════════╝
   `);
+  startReminderScheduler();
 });
 
 export default app;

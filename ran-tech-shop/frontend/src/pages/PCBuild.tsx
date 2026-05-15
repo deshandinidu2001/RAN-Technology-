@@ -388,7 +388,7 @@ const PCBuild: React.FC = () => {
             transition={{ delay: 0.5, duration: 0.8 }}
             className="text-white/50 text-lg mt-8 max-w-xl leading-relaxed"
           >
-            Pick every component. We assemble, stress-test, and deliver precision-built to your exact spec.
+            Pick every component. We assemble, stress-test, and hand it over precision-built to your exact spec at our shop.
           </motion.p>
 
           {/* Feature strip */}

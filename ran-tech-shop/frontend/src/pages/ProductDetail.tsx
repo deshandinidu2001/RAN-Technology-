@@ -369,8 +369,8 @@ const ProductDetail: React.FC = () => {
                   </svg>
                 </div>
                 <div>
-                  <p className="text-white font-medium">Free Shipping</p>
-                  <p className="text-white/50 text-sm">On orders over Rs. 10,000</p>
+                  <p className="text-white font-medium">In-store Pickup</p>
+                  <p className="text-white/50 text-sm">Reserve online, collect at our Bibile shop</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">

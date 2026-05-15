@@ -41,17 +41,17 @@ const About: React.FC = () => {
 
   const milestones = [
     { year: '2020', title: 'Founded', body: 'Started in a small Monaragala workshop.' },
-    { year: '2021', title: '1K customers', body: 'First thousand orders shipped.' },
+    { year: '2021', title: '1K customers', body: 'First thousand customers served in-store.' },
     { year: '2022', title: 'Catalogue x10', body: '500+ SKUs across every category.' },
-    { year: '2023', title: 'Islandwide', body: 'Tracked delivery to all 25 districts.' },
-    { year: '2024', title: '10K orders', body: 'A milestone and a beginning.' },
+    { year: '2023', title: 'Repair lab', body: 'Full repair workshop opens in Bibile.' },
+    { year: '2024', title: '10K customers', body: 'A milestone and a beginning.' },
   ];
 
   const perks = [
     { title: 'Expert curation', desc: 'Real reviews from people who use the gear daily.' },
-    { title: 'Same-day dispatch', desc: 'Order before 4 PM, it ships the same day.' },
-    { title: 'Secure checkout', desc: 'Bank-grade encryption on every transaction.' },
-    { title: '30-day returns', desc: 'Hassle-free returns on every purchase.' },
+    { title: 'In-store pickup', desc: 'Reserve products online, collect them in our Bibile shop.' },
+    { title: 'Honest pricing', desc: 'Request a written quotation before you visit.' },
+    { title: '30-day returns', desc: 'Hassle-free returns on every in-store purchase.' },
   ];
 
   return (
@@ -87,7 +87,7 @@ const About: React.FC = () => {
             <motion.div {...fade} transition={{ delay: 0.15 }} className="lg:col-span-4">
               <p className="text-white/45 text-base leading-relaxed mb-6">
                 Founded by tech enthusiasts, for tech enthusiasts. We curate the best hardware from the
-                world's leading brands and deliver it islandwide with the kind of care big retailers forgot.
+                world's leading brands and offer it through our Bibile shop with the kind of care big retailers forgot.
               </p>
               <Link
                 to="/shop"

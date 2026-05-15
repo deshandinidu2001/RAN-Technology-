@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../store/authStore';
+import api from '../utils/api';
 
 const RepairContact: React.FC = () => {
   const { user } = useAuthStore();
@@ -13,6 +14,7 @@ const RepairContact: React.FC = () => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
 
   // Auto-fill name & email when the user is logged in. Only seed empty fields so
@@ -29,18 +31,43 @@ const RepairContact: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.message.trim()) {
+      setSubmitError('Please describe the issue before sending.');
+      return;
+    }
+    setSubmitError(null);
     setIsSubmitting(true);
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    setIsSubmitting(false);
-    setSubmitted(true);
-    setFormData({
-      name: user?.name || '',
-      email: user?.email || '',
-      device: '',
-      issue: '',
-      message: '',
-    });
-    setTimeout(() => setSubmitted(false), 5000);
+    // The repair-contact form has an extra "device" and "issue" field —
+    // fold them into the subject + message body so they land in the same
+    // ContactMessage inbox the admin reads.
+    const subject = [formData.device, formData.issue].filter(Boolean).join(' · ') || 'Repair inquiry';
+    const detail = [
+      formData.device ? `Device: ${formData.device}` : '',
+      formData.issue ? `Issue type: ${formData.issue}` : '',
+      '',
+      formData.message,
+    ].filter(Boolean).join('\n');
+    try {
+      await api.post('/contact', {
+        name: formData.name,
+        email: formData.email,
+        subject,
+        message: detail,
+      });
+      setSubmitted(true);
+      setFormData({
+        name: user?.name || '',
+        email: user?.email || '',
+        device: '',
+        issue: '',
+        message: '',
+      });
+      setTimeout(() => setSubmitted(false), 5000);
+    } catch (err: any) {
+      setSubmitError(err?.response?.data?.error || 'Failed to send. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -309,6 +336,10 @@ const RepairContact: React.FC = () => {
                           placeholder="Describe the issue in detail..."
                         />
                       </div>
+
+                      {submitError && (
+                        <p className="text-red-500 text-xs">{submitError}</p>
+                      )}
 
                       <motion.button
                         type="submit"

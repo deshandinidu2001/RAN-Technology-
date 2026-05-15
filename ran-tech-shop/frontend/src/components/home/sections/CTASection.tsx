@@ -191,7 +191,7 @@ const CTASection = () => {
               >
                 <span>Experience</span>
                 <RotatingText
-                  texts={['Premium Quality', 'Expert Service', 'Best Prices', 'Fast Delivery', 'Warranty Support']}
+                  texts={['Premium Quality', 'Expert Service', 'Best Prices', 'Trusted Repairs', 'Warranty Support']}
                   className="text-[#F7B500] font-bold"
                   rotationInterval={2500}
                 />
@@ -254,8 +254,8 @@ const CTASection = () => {
               >
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                   {[
-                    { icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z', label: 'Secure Payment', color: '#10B981' },
-                    { icon: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4', label: 'Free Delivery', color: '#06B6D4' },
+                    { icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z', label: 'Genuine Products', color: '#10B981' },
+                    { icon: 'M3 21v-4a2 2 0 012-2h14a2 2 0 012 2v4M9 7a4 4 0 118 0 4 4 0 01-8 0z', label: 'In-store Pickup', color: '#06B6D4' },
                     { icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z', label: 'Warranty', color: '#F7B500' },
                     { icon: 'M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z', label: '24/7 Support', color: '#7C3AED' }
                   ].map((item, i) => (

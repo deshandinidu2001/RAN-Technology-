@@ -73,13 +73,59 @@ export const updateCategory = async (req: Request, res: Response): Promise<void>
   }
 };
 
-// DELETE /api/repair-categories/:id
+// DELETE /api/repair-categories/:id?cascade=services
+//
+// Default: refuses if services are still tagged to this category so they don't
+// silently end up in "unassigned". Pass ?cascade=services to delete those
+// services along with the category in one shot.
 export const deleteCategory = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const { error } = await supabase.from('RepairCategory').delete().eq('id', id);
-    if (error) throw error;
-    res.json({ success: true });
+    const cascade = req.query.cascade === 'services';
+
+    // Load the category so we know which services to look for.
+    const { data: cat, error: catErr } = await supabase
+      .from('RepairCategory')
+      .select('id, slug, deviceType, name')
+      .eq('id', id)
+      .maybeSingle();
+    if (catErr) throw catErr;
+    if (!cat) {
+      res.status(404).json({ error: 'Category not found' });
+      return;
+    }
+    const c: any = cat;
+
+    // Find services tagged to this category.
+    const { data: services, error: svcErr } = await supabase
+      .from('Product')
+      .select('id, name')
+      .eq('isService', true)
+      .eq('serviceType', c.slug)
+      .eq('deviceType', c.deviceType);
+    if (svcErr) throw svcErr;
+    const tagged = services ?? [];
+
+    if (tagged.length > 0 && !cascade) {
+      // Tell the client how many would be orphaned so it can prompt the admin.
+      res.status(409).json({
+        error: 'Category has services attached',
+        serviceCount: tagged.length,
+        services: tagged.map((s: any) => ({ id: s.id, name: s.name })),
+      });
+      return;
+    }
+
+    // Cascade: delete those services first.
+    if (cascade && tagged.length > 0) {
+      const ids = tagged.map((s: any) => s.id);
+      const { error: delSvcErr } = await supabase.from('Product').delete().in('id', ids);
+      if (delSvcErr) throw delSvcErr;
+    }
+
+    const { error: delCatErr } = await supabase.from('RepairCategory').delete().eq('id', id);
+    if (delCatErr) throw delCatErr;
+    res.json({ success: true, deletedServices: cascade ? tagged.length : 0 });
   } catch (error) {
     console.error('deleteCategory error', error);
     res.status(500).json({ error: 'Failed to delete category' });

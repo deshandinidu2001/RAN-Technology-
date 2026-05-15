@@ -193,8 +193,8 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, isOpen, onClose })
                         </svg>
                       </div>
                       <div>
-                        <p className="text-sm text-white font-medium">Free Shipping</p>
-                        <p className="text-xs text-white/50">On orders over Rs. 10,000</p>
+                        <p className="text-sm text-white font-medium">In-store Pickup</p>
+                        <p className="text-xs text-white/50">Reserve online, collect at our shop</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
